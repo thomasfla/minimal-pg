@@ -16,10 +16,8 @@ Dpy=0.20
 beta_x=1.0
 beta_y=5.0
 
-
 USE_WIIMOTE=False
 USE_GAMEPAD=True
-
 
 if USE_WIIMOTE:
     import cwiid
@@ -45,11 +43,11 @@ if USE_GAMEPAD:
 
 
 sigmaNoisePosition=0.0
-sigmaNoiseVelocity=0.01
+sigmaNoiseVelocity=0.0
 #initialisation of the pg
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 
-pps=10 #point per step
+pps=5 #point per step
 v=[1.0,0.1]
 p0=[-0.01,-0.01]
 x0=[[0,0] , [0,0]]
@@ -59,7 +57,7 @@ comy=[]
 LR=True
 plt.ion()
 t0=time.time()
-for k in range (40): #do 40 steps
+for k in range (80): #do 80 steps
     for ev in np.linspace(1.0/pps,1,pps):
         t=durrationOfStep*ev
         [c_x , c_y , d_c_x , d_c_y]         = pg.computeNextCom(p0,x0,t)
@@ -86,7 +84,7 @@ for k in range (40): #do 40 steps
         [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=20)
         #plot data
         plt.axis((-1,5,-1,1))
-        plt.plot(cc_x,cc_y,'g')
+        plt.plot(cc_x,cc_y,'g',lw=0.5)
         plt.hold(True)
         plt.plot(steps[0],steps[1],'rD')
         plt.plot([steps[0][0]],[steps[1][0]],'bD')
