@@ -8,16 +8,16 @@ import numpy as np
 import time
 print ("start")
 #define const
-Nstep=8
+Nstep=6
 g=9.81
 h=0.63
-durrationOfStep=0.7
+durrationOfStep=1.0
 Dpy=0.30
 beta_x=1.5
 beta_y=5.0
 
 
-USE_WIIMOTE=True
+USE_WIIMOTE=False
 
 if USE_WIIMOTE:
     import cwiid
@@ -34,7 +34,7 @@ sigmaNoiseVelocity=0.0
 #initialisation of the pg
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 
-
+pps=5 #point per step
 v=[1.0,0.1]
 p0=[-0.01,-0.01]
 x0=[[0,0] , [0,0]]
@@ -43,8 +43,9 @@ comy=[]
 
 LR=True
 plt.ion()
+t0=time.time()
 for k in range (40): #do 40 steps
-    for ev in np.linspace(0,1,10):
+    for ev in np.linspace(1.0/pps,1,pps):
         t=durrationOfStep*ev
         [c_x , c_y , d_c_x , d_c_y]         = pg.computeNextCom(p0,x0,t)
         x=[[c_x,d_c_x] , [c_y,d_c_y]]
@@ -72,8 +73,13 @@ for k in range (40): #do 40 steps
         plt.plot([c_x],[c_y],"D")
         plt.plot(comx,comy,"k")
         
-        plt.draw()
-        time.sleep(0.01)
+        plt.draw()  
+        FlagRT = False
+        while(time.time()-t0 < (durrationOfStep/pps)):
+            FlagRT = True
+        if not FlagRT :
+            print "not in real time !"
+        t0=time.time()
         plt.clf()
         #prepare next point
     p0 = [steps[0][1],steps[1][1]] #
