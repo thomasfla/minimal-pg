@@ -1,9 +1,7 @@
 #!/usr/bin/env python
     #Minimal PG using only steps positions as parameters
     #by using analytic solve of LIP dynamic equation
-import matplotlib.pyplot as plt
-import numpy as np
-import time
+
 class PgMini (object):
     '''
     Minimal Walking Patern Genegator using only steps positions as 
@@ -28,9 +26,8 @@ class PgMini (object):
          The solution is return at a $N$ samples per steps rate
          
          This function is usefull to see the all preview but should not 
-         be used in an optimal control implementation since only one 
+         be used in an MPC implementation since only one 
          value of the COM trajectory is needed at time 0+dt.
-
     '''
     def __init__ (self,Nstep=8,g=9.81,h=0.63,durrationOfStep=0.7,Dpy=0.30,beta_x=1.5,beta_y=5.0):
         self.g               = g       # gravity
@@ -40,7 +37,7 @@ class PgMini (object):
         self.Dpy             = Dpy     # absolute y distance from LF to RF
         self.beta_x          = beta_x  # Gain of step placement heuristic respect (x)
         self.beta_y          = beta_y  # Gain of step placement heuristic respect (y)
-    def computeStepsPosition(self,alpha=0.0,p0=[0,0],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True):
+    def computeStepsPosition(self,alpha=0.0,p0=[-0.01,-0.01],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True):
         #const definitions
         g               = self.g     
         h               = self.h
@@ -123,10 +120,8 @@ class PgMini (object):
         durrationOfStep = self.durrationOfStep   
         x0_x=np.matrix([[x0[0][0]],
                         [x0[0][1]]])
-
         x0_y=np.matrix([[x0[1][0]],
                         [x0[1][1]]])
-
         cc_x=[]
         cc_y=[]
         tt=[]
@@ -158,8 +153,40 @@ class PgMini (object):
             d_c0_x=d_c_x
             d_c0_y=d_c_y
         return [tt, cc_x , cc_y , d_cc_x , d_cc_y]
+    def computeNextCom(self,steps,alpha=0.0,x0=[[0,0] , [0,0]],t=0.05):
+        px=steps[0][0]
+        py=steps[1][0]
+        '''Compute COM at time  (t  < durrationOfStep*(1-alpha)  ) This function is 
+        usefull for MPC implementation '''
+        
+        #TODO check  t  < durrationOfStep*(1-alpha)  
+        w2= self.g/self.h
+        w = np.sqrt(w2)
+        durrationOfStep = self.durrationOfStep   
+        x0_x=np.matrix([[x0[0][0]],
+                        [x0[0][1]]])
 
-#basic usage and benchmark:
+        x0_y=np.matrix([[x0[1][0]],
+                        [x0[1][1]]])
+        
+        c0_x  =x0_x[0,0]
+        c0_y  =x0_y[0,0]
+        d_c0_x=x0_x[1,0]
+        d_c0_y=x0_y[1,0]
+
+        c_x   =     (c0_x -px) * np.cosh(w*t) + (d_c0_x/w) * np.sinh(w*t)+px
+        d_c_x = w*(c0_x -px) * np.sinh(w*t) +     d_c0_x * np.cosh(w*t) 
+        c_y   =     (c0_y -py) * np.cosh(w*t) + (d_c0_y/w) * np.sinh(w*t)+py
+        d_c_y = w*(c0_y -py) * np.sinh(w*t) +     d_c0_y * np.cosh(w*t) 
+
+        return [c_x , c_y , d_c_x , d_c_y]
+        
+#basic usage and benchmark:      
+
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+
 pg = PgMini()               #initialisation of the pg
 
 #solve and return steps placement
@@ -170,10 +197,13 @@ print "compute time: " + str((time.time()-t0)*1e3)  + " milliseconds"
 #get the COM preview
 [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps)
 
+#get COM at a particular time value
+[c_x , c_y , d_c_x , d_c_y]         = pg.computeNextCom(steps)
 #plot data
 plt.plot(cc_x,cc_y)
 plt.hold(True)
 plt.plot(steps[0],steps[1])
+
+plt.plot(steps[0],steps[1])
+plt.plot([c_x],[c_y],"D")
 plt.show()
-
-
