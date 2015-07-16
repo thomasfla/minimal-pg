@@ -8,16 +8,18 @@ import numpy as np
 import time
 print ("start")
 #define const
-Nstep=6
+Nstep=8
 g=9.81
 h=0.63
-durrationOfStep=1.0
-Dpy=0.30
-beta_x=1.5
+durrationOfStep=0.7
+Dpy=0.20
+beta_x=1.0
 beta_y=5.0
 
 
 USE_WIIMOTE=False
+USE_GAMEPAD=True
+
 
 if USE_WIIMOTE:
     import cwiid
@@ -26,15 +28,28 @@ if USE_WIIMOTE:
     time.sleep(0.5)
     wm.led=1
     wm.rpt_mode = cwiid.RPT_BTN | cwiid.RPT_ACC #Btns and Accelerometer
-
+    
+if USE_GAMEPAD:
+    import pygame
+    import time
+    pygame.init()
+    pygame.joystick.init()
+    pygame.event.pump()
+    if (pygame.joystick.get_count() > 0):
+        print "found gamepad! : " + pygame.joystick.Joystick(0).get_name()
+        my_joystick = pygame.joystick.Joystick(0)
+        my_joystick.init()
+    else :
+        print "No gamepad found"
+        USE_GAMEPAD = False
 
 
 sigmaNoisePosition=0.0
-sigmaNoiseVelocity=0.0
+sigmaNoiseVelocity=0.01
 #initialisation of the pg
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 
-pps=5 #point per step
+pps=10 #point per step
 v=[1.0,0.1]
 p0=[-0.01,-0.01]
 x0=[[0,0] , [0,0]]
@@ -62,7 +77,11 @@ for k in range (40): #do 40 steps
         if USE_WIIMOTE:
             v[0]=v[0]*0.2 + 0.8*(wm.state['acc'][0]-128)/50.0
             v[1]=v[1]*0.2 + 0.8*(wm.state['acc'][1]-128)/50.0    
-        
+        if USE_GAMEPAD:
+            pygame.event.pump()
+            v[0]=my_joystick.get_axis(0)
+            v[1]=-my_joystick.get_axis(1)
+        print x
         steps = pg.computeStepsPosition(ev,p0,v,x,LR)
         [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=20)
         #plot data
@@ -70,6 +89,8 @@ for k in range (40): #do 40 steps
         plt.plot(cc_x,cc_y,'g')
         plt.hold(True)
         plt.plot(steps[0],steps[1],'rD')
+        plt.plot([steps[0][0]],[steps[1][0]],'bD')
+        
         plt.plot([c_x],[c_y],"D")
         plt.plot(comx,comy,"k")
         
@@ -85,7 +106,7 @@ for k in range (40): #do 40 steps
     p0 = [steps[0][1],steps[1][1]] #
     x0 = x
     LR = not LR
-    
+    plt.show()
 
 if USE_WIIMOTE:
     wm.close()
