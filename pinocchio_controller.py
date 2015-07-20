@@ -11,7 +11,7 @@ class PinocchioController(object):
         self.robot.display(self.robot.q0)
         self.robot.viewer.gui.refresh()
         self.q=np.copy(self.robot.q0)
-    def controlLfRfCom(self,Lf=[0.0,0.0,0.0],Rf=[0.0,0.0,0.0],Com=[0,0],K=1.0):
+    def controlLfRfCom(self,Lf=[0.0,0.0,0.0],Rf=[0.0,0.0,0.0],Com=[0,0,0.63],K=1.0):
         def robotint(q,dq):
             M = se3.SE3( se3.Quaternion(q[6,0],q[3,0],q[4,0],q[5,0]).matrix(),q[:3])
             dM = se3.exp(dq[:6])
@@ -51,9 +51,9 @@ class PinocchioController(object):
         Jrf[:3] = self.robot.Mrf(self.q).rotation * Jrf[:3,:]#Orient in the world base
         errLf = errorInSE3(SE3_LF,self.robot.Mlf(self.q))
         #_COM_______________________________________________________________
-        Jcom=self.robot.Jcom(self.q)[:2]
-        errCOM = self.robot.com(self.q)[:2]-np.matrix(Com).T
-        print self.robot.com(self.q)[:2]
+        Jcom=self.robot.Jcom(self.q)[:3]
+        errCOM = self.robot.com(self.q)[:3]-np.matrix(Com).T
+        print self.robot.com(self.q)[:3]
         print np.array(Com).T
         #_TASK1 STACK_______________________________________________________
         print errLf.shape

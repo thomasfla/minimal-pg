@@ -43,7 +43,7 @@ if USE_GAMEPAD:
 
 
 sigmaNoisePosition=0.0
-sigmaNoiseVelocity=0.0
+sigmaNoiseVelocity=0.00
 #initialisation of the pg
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 

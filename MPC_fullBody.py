@@ -1,7 +1,7 @@
 def foot_interpolate(x0,y0,x1,y1,ev):
     dtotal = np.sqrt((x1-x0)**2 + (y1-y0)**2)
     alpha = np.arctan2((x1-x0),(y1-y0))
-    r=0.6
+    r=0.05
     if (2*r)>dtotal: # in small step, do not go to max height
         r=dtotal/2
     d2=dtotal-2*r
@@ -145,7 +145,7 @@ for k in range (80): #do 80 steps
         if not FlagRT :
             print "not in real time !"
 
-        p.controlLfRfCom(left_foot_xyz,right_foot_xyz,[x[0][0],x[1][0]],1.5)
+        p.controlLfRfCom(left_foot_xyz,right_foot_xyz,[x[0][0],x[1][0],h],1.5)
         t0=time.time()
         #plt.clf()
     #prepare next point
