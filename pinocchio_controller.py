@@ -3,6 +3,7 @@ import numpy as np
 from pinocchio.utils import *
 from pinocchio.romeo_wrapper import RomeoWrapper
 import scipy
+from IPython import embed
 class PinocchioController(object):
     def __init__(self):
         self.robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
@@ -51,25 +52,63 @@ class PinocchioController(object):
         Jrf[:3] = self.robot.Mrf(self.q).rotation * Jrf[:3,:]#Orient in the world base
         errLf = errorInSE3(SE3_LF,self.robot.Mlf(self.q))
         #_COM_______________________________________________________________
+        errCOM = self.robot.com(self.q)[:3]-(np.matrix(Com).T)[:3]
         Jcom=self.robot.Jcom(self.q)[:3]
-        errCOM = self.robot.com(self.q)[:3]-np.matrix(Com).T
-        print self.robot.com(self.q)[:3]
-        print np.array(Com).T
-        #_TASK1 STACK_______________________________________________________
-        print errLf.shape
-        print errRf.shape
-        print errCOM.shape
-        err1 = np.vstack([errLf,errRf,errCOM])
+        #_Trunk_____________________________________________________________
+        idx_Trunk = self.robot.index('root')
+        
+        #~ ['universe',
+         #~ 'root',
+         #~ 'LHipYaw',
+         #~ 'LHipRoll',
+         #~ 'LHipPitch',
+         #~ 'LKneePitch',
+         #~ 'LAnklePitch',
+         #~ 'LAnkleRoll',
+         #~ 'RHipYaw',
+         #~ 'RHipRoll',
+         #~ 'RHipPitch',
+         #~ 'RKneePitch',
+         #~ 'RAnklePitch',
+         #~ 'RAnkleRoll',
+         #~ 'TrunkYaw',
+         #~ 'LShoulderPitch',
+         #~ 'LShoulderYaw',
+         #~ 'LElbowRoll',
+         #~ 'LElbowYaw',
+         #~ 'LWristRoll',
+         #~ 'LWristYaw',
+         #~ 'LWristPitch',
+         #~ 'NeckYaw',
+         #~ 'NeckPitch',
+         #~ 'HeadPitch',
+         #~ 'HeadRoll',
+         #~ 'RShoulderPitch',
+         #~ 'RShoulderYaw',
+         #~ 'RElbowRoll',
+         #~ 'RElbowYaw',
+         #~ 'RWristRoll',
+         #~ 'RWristYaw',
+         #~ 'RWristPitch']
 
-        J1 = np.vstack([Jlf,Jrf,Jcom])
+        #embed()
+        MTrunk0=self.robot.position(self.robot.q0,idx_Trunk)
+        MTrunk=self.robot.position(self.q,idx_Trunk)
+        errTrunk=errorInSE3(MTrunk0,MTrunk)[3:6]
+        JTrunk=self.robot.jacobian(self.q,idx_Trunk)[3:6]
+
+    #_TASK1 STACK_______________________________________________________
+        err1 = np.vstack([errLf,errRf,errCOM,errTrunk])
+        J1 = np.vstack([Jlf,Jrf,Jcom,JTrunk])
+        
         #_Posture___________________________________________________________
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
         errpost =  -1 * (self.q-self.robot.q0)[7:]
-        
-        #_TASK2 STACK_______________________________________________________
+
+        #embed()
+    #_TASK2 STACK_______________________________________________________
         err2 = errpost
         J2 = Jpost
-
         #Hierarchical solve_________________________________________________
         qdot = npl.pinv(J1)*-K * err1
         Z = null(J1)
@@ -81,6 +120,4 @@ class PinocchioController(object):
         
         return self.robot.com(self.q)
         
-p=PinocchioController()
-p.controlLfRfCom()
 

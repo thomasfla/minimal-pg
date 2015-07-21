@@ -28,6 +28,7 @@ def foot_interpolate(x0,y0,x1,y1,ev):
     #Minimal PG using only steps positions as parameters
     #by using analytic solve of LIP dynamic equation
 from pinocchio_controller import PinocchioController
+from IPython import embed
 from minimal_pg import PgMini
 import matplotlib.pyplot as plt
 import numpy as np
@@ -37,13 +38,13 @@ print ("start")
 Nstep=8
 g=9.81
 h=0.63
-durrationOfStep=0.5
+durrationOfStep=0.8
 Dpy=0.20
 beta_x=3.0
-beta_y=10.0
+beta_y=8.0
 
 USE_WIIMOTE=False
-USE_GAMEPAD=True
+USE_GAMEPAD=False
 DISPLAY_PREVIEW=False
 if USE_WIIMOTE:
     import cwiid
@@ -72,8 +73,8 @@ sigmaNoiseVelocity=0.00
 #initialisation of the pg
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 p=PinocchioController()
-pps=20 #point per step
-v=[1.0,0.1]
+pps=50 #point per step
+v=[1.0,1.0]
 p0=[-0.01,-0.01]
 x0=[[0,0] , [0,0]]
 comx=[]
@@ -84,7 +85,8 @@ lastFoot=p0
 LR=True
 #plt.ion()
 t0=time.time()
-for k in range (80): #do 80 steps
+RUN_FLAG=True
+while(RUN_FLAG):
     for ev in np.linspace(1.0/pps,1,pps):
         t=durrationOfStep*ev
 
@@ -97,16 +99,27 @@ for k in range (80): #do 80 steps
         if sigmaNoiseVelocity >0:  
             x[0][1]+=np.random.normal(0,sigmaNoiseVelocity)
             x[1][1]+=np.random.normal(0,sigmaNoiseVelocity)
-        comx.append(x[0][0])
-        comy.append(x[1][0])
+        #comx.append(x[0][0])
+        #comy.append(x[1][0])
         
         if USE_WIIMOTE:
             v[0]=v[0]*0.2 + 0.8*(wm.state['acc'][0]-128)/50.0
             v[1]=v[1]*0.2 + 0.8*(wm.state['acc'][1]-128)/50.0    
-        if USE_GAMEPAD:
+        elif USE_GAMEPAD:
             pygame.event.pump()
             v[0]=-my_joystick.get_axis(1)
             v[1]=-my_joystick.get_axis(0)
+            if my_joystick.get_button(0) == 1 :
+                RUN_FLAG = False
+        else :
+            if c_x>1.0:
+                v[0]=-1.0
+            if c_x<-1.0:
+                v[0]=1.0
+            if c_y>1.0:
+                v[1]=-1.0
+            if c_y<-1.0:
+                v[1]=1.0
         steps = pg.computeStepsPosition(ev,p0,v,x,LR)
         currentFoot = [steps[0][0],steps[1][0]]
         nextFoot    = [steps[0][1],steps[1][1]]
@@ -142,11 +155,11 @@ for k in range (80): #do 80 steps
         FlagRT = False
         while(time.time()-t0 < (durrationOfStep/pps)):
             FlagRT = True
+        t0=time.time()
         if not FlagRT :
             print "not in real time !"
-
-        p.controlLfRfCom(left_foot_xyz,right_foot_xyz,[x[0][0],x[1][0],h],1.5)
-        t0=time.time()
+        print p.controlLfRfCom(left_foot_xyz,right_foot_xyz,[x[0][0],x[1][0],h],1.0)
+        
         #plt.clf()
     #prepare next point
     lastFoot = currentFoot
