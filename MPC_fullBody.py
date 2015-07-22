@@ -35,16 +35,16 @@ import numpy as np
 import time
 print ("start")
 #define const
-Nstep=8
+Nstep=6
 g=9.81
 h=0.63
-durrationOfStep=0.8
+durrationOfStep=0.2
 Dpy=0.20
 beta_x=3.0
 beta_y=8.0
 
 USE_WIIMOTE=False
-USE_GAMEPAD=False
+USE_GAMEPAD=True
 DISPLAY_PREVIEW=False
 if USE_WIIMOTE:
     import cwiid
@@ -155,10 +155,10 @@ while(RUN_FLAG):
         FlagRT = False
         while(time.time()-t0 < (durrationOfStep/pps)):
             FlagRT = True
-        t0=time.time()
         if not FlagRT :
-            print "not in real time !"
-        print p.controlLfRfCom(left_foot_xyz,right_foot_xyz,[x[0][0],x[1][0],h],1.0)
+            print "not in real time !" + str((time.time()-t0)*1000) + " ms"
+        t0=time.time()
+        p.controlLfRfCom(left_foot_xyz,right_foot_xyz,[x[0][0],x[1][0],h],1.0)
         
         #plt.clf()
     #prepare next point

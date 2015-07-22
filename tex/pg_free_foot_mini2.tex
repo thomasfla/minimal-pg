@@ -1,0 +1,163 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+
+\begin{document}
+\title{Générateur de marche en nombre minimal de paramètre}
+\author{Thomas Flayols}
+\maketitle
+\section*{Introduction}
+Dans le cas d'un marcheur aux pieds ponctuels, ayant un centre de masse (COM) d'une hauteur constante, on cherche à écrire un PG minimal en nombre de variable.
+
+La  trajectoire du COM n'étant seulement régie par la position du point d’appui au sol et par des conditions initiales sur le COM, il devrait être possible d'écrire un générateur de marche (PG) avec un nombre de variable fortement réduit par rapport à une approche considérant directement la trajectoire du COM.
+
+Hypothèses:
+\begin{itemize}
+\item Pieds ponctuels
+\item Fréquence des pas constante
+\item Orientation des pieds constante
+\end{itemize}
+
+Avec ses hypothèses, on veut trouver un PG temps réel capable de prédire le placement de quelques pas dans le futur, se contrôlant en vitesse de COM.
+\section{Définition du problème}
+
+Trouver les positions de pieds $f_1,...,f_M$ qui font se diriger le COM $c$ avec une vitesse $\dot{c}^*$:
+\begin{equation}\label{problem}
+\min_{ f_1,...,f_M} \sum\limits_{k=1}^n ||f_{k+1}-f_{k}||^2 + \beta||\dot{c_k}-\dot{c}^*||^2
+\end{equation}
+où le COM est calculé analytiquement en résolvant l'équation du pendule inverse linéarisé (LIP):
+\begin{equation}\label{lip}
+\ddot{c}(t)=\omega^2 (c(t)-p)
+\end{equation}
+
+\section{Résolution analytique du LIP}
+\subsection{Phase de simple support}
+La solution de l'équation du second ordre (\ref{lip}) pendant les phases de simples supports (p=cte) peut s'écrire sous la forme suivante:
+\begin{equation}
+c(t)=(c_0-p)\cosh(\omega t)+\dfrac{1}{\omega}\dot{c_0}\sinh(\omega t)+p
+\end{equation}
+avec sa dérivée:
+\begin{equation}
+\dot{c}(t)=\omega(c_0-p)\sinh(\omega t)+\dot{c_0}\cosh(\omega t)
+\end{equation}
+Pour un temps fixé $t$, le COM et sa vitesse s'expriment donc linéairement en fonction de leurs conditions initiales ($c_0$,$\dot{c_0}$) et de la position du point d'appuis $p$
+\begin{equation}
+\begin{bmatrix} 
+c(t) \\
+\dot{c}(t) 
+\end{bmatrix} 
+= 
+\begin{bmatrix} 
+\cosh(\omega t) 		&	 \dfrac{1}{\omega}\sinh(\omega t) \\
+\omega\sinh(\omega t)	&	 \cosh(\omega t)
+\end{bmatrix}
+\begin{bmatrix} 
+c_0 \\
+\dot{c_0}
+\end{bmatrix} 
++
+\begin{bmatrix} 
+1-cosh(\omega t) 		 \\
+-\omega\sinh(\omega t)	
+\end{bmatrix}
+p
+\end{equation}
+On notera:
+\begin{equation}
+\begin{bmatrix} 
+c(t) \\
+\dot{c}(t) 
+\end{bmatrix} 
+= 
+F_x(t)
+\begin{bmatrix} 
+c_0 \\
+\dot{c_0}
+\end{bmatrix} 
++
+F_u(t) p
+\end{equation}
+\subsection{Phase de double support}
+Pendant la phase de double support, il y a une transition du centre de pression entre le placement d'un pied et du suivant. Dans notre PG, on imposera une transition affine:
+\begin{equation}
+p(t)=f_0+\frac{(f_1-f_0)}{T_{ss}}t
+\end{equation}
+On remarque que $p(t)$ est une solution particulière de l'équation (\ref{lip}) 
+
+La solution est alors de la forme:
+\begin{equation}
+c(t)=(c_0-p_0)\cosh(\omega t)+\dfrac{1}{\omega}\dot{c_0}\sinh(\omega t)+p(t)
+\end{equation}
+avec sa dérivée:
+\begin{equation}
+\dot{c}(t)=\omega(c_0-p_0)\sinh(\omega t)+\dot{c_0}\cosh(\omega t)+\dot{p}(t)
+\end{equation}
+\begin{equation}
+\begin{bmatrix} 
+c(t) \\
+\dot{c}(t) 
+\end{bmatrix} 
+= 
+\begin{bmatrix} 
+\cosh(\omega t) 		&	 \dfrac{1}{\omega}\sinh(\omega t) \\
+\omega\sinh(\omega t)	&	 \cosh(\omega t)
+\end{bmatrix}
+\begin{bmatrix} 
+c_0 \\
+\dot{c_0}
+\end{bmatrix} 
++
+\begin{bmatrix} 
+1-\frac{t}{T_ss}-cosh(\omega t) 		  & \frac{t}{T_ss} \\
+-\omega\sinh(\omega t)-	\frac{1}{T_ss} & -	\frac{1}{T_ss}
+\end{bmatrix}
+\begin{bmatrix} 
+f_0 \\
+f_1
+\end{bmatrix}
+\end{equation}
+\section{Mise en forme du QP}
+Pour plus de lisibilité, on note:
+\begin{equation}
+F_x=F_x(T_{pas})  \linebreak
+\end{equation} 
+\begin{equation}
+F_u=F_u(T_{pas})
+\end{equation} 
+
+Finalement, le problème (\ref{problem}) revient à minimiser la norme quadratique des quantités (\ref{min_velocity}) et (\ref{min_step_dist}):
+\begin{equation}\label{min_velocity}
+\begin{pmatrix} 
+ F_u        		& 0 	 		& 0 &0& \hdots & 0 \\
+ {F_x}^1 F_u 		& F_u 	 		& 0 &0& \hdots & 0 \\
+ {F_x}^2 F_u 		& {F_x}^1 F_u 	& F_u &0& \hdots & 0 \\ \\
+ \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ \\
+ {F_x}^{N_s-1} F_u 	&  {F_x}^{N_s-2}	& \hdots& {F_x}^2 F_u& {F_x}^1 F_u  & F_u \\
+\end{pmatrix}\begin{pmatrix} 
+f_0 \\
+\vdots \\
+f_{N_s}
+\end{pmatrix} - \begin{pmatrix} 
+\dot{c}^*-{F_x} c_0\\
+\dot{c}^*-{F_x}^2 c_0\\
+\vdots \\
+\dot{c}^*-{F_x}^{N_s} c_0\\
+\end{pmatrix}
+\end{equation}
+\begin{equation}\label{min_step_dist}
+\begin{pmatrix} 
+ \beta    & -\beta 	 	& 0 &0& \hdots & 0 \\
+ 0&\beta    & -\beta 	 	& 0 & \hdots & 0 \\
+ \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ 
+ 0       		&  	 		&    \hdots&  & \beta    & -\beta \\
+\end{pmatrix}
+\begin{pmatrix} 
+f_0 \\
+\vdots \\
+f_{N_s}
+\end{pmatrix}
+\end{equation}
+
+\end{document}
