@@ -3,7 +3,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
-
+\usepackage{comment}
 \begin{document}
 \title{Générateur de marche en nombre minimal de paramètre}
 \author{Thomas Flayols}
@@ -159,5 +159,75 @@ f_0 \\
 f_{N_s}
 \end{pmatrix}
 \end{equation}
+
+
+\begin{equation}
+x_1=D_xx_0+D_u\begin{pmatrix} f_0 \\ f_1 \end{pmatrix}
+\end{equation}
+
+\begin{equation}
+x_2=
+S_xD_xx_0+
+S_xD_u\begin{pmatrix} f_0 \\ f_1 \end{pmatrix}+
+S_u\begin{pmatrix} f_1 \\ f_2 \end{pmatrix}
+\end{equation}
+
+\begin{equation}
+x_3=
+D_xS_xD_xx_0+
+D_xS_xD_u\begin{pmatrix} f_0 \\ f_1 \end{pmatrix}+
+D_xS_u\begin{pmatrix} f_1 \\ f_2 \end{pmatrix}+
+D_u\begin{pmatrix} f_2 \\ f_3 \end{pmatrix}
+\end{equation}
+
+\begin{equation}
+x_4=
+(S_xD_x)^2x_0+
+S_xD_xS_xD_u\begin{pmatrix} f_0 \\ f_1 \end{pmatrix}+
+S_xD_xS_u\begin{pmatrix} f_1 \\ f_2 \end{pmatrix}+
+S_xD_u\begin{pmatrix} f_2 \\ f_3 \end{pmatrix}+
+S_u\begin{pmatrix} f_3 \\ f_4 \end{pmatrix}
+\end{equation}
+\begin{comment}
+
+\begin{equation}
+x_5=
+(D_xS_xD_xS_x)D_xx_0+
+(D_xS_xD_xS_x)D_u\begin{pmatrix} f_0 \\ f_1 \end{pmatrix}+
+(D_xS_x)D_xS_u\begin{pmatrix} f_1 \\ f_2 \end{pmatrix}+
+(D_xS_x)D_u\begin{pmatrix} f_2 \\ f_3 \end{pmatrix}+
+D_xS_u\begin{pmatrix} f_3 \\ f_4 \end{pmatrix}+
+D_u\begin{pmatrix} f_4 \\ f_5 \end{pmatrix}
+\end{equation}
+
+\begin{equation}
+x_6=
+(S_xD_x)^3x_0+
+(S_xD_x)^2S_xD_u\begin{pmatrix} f_0 \\ f_1 \end{pmatrix}+
+(S_xD_x)^2S_u\begin{pmatrix} f_1 \\ f_2 \end{pmatrix}+
+S_xD_xS_xD_u\begin{pmatrix} f_2 \\ f_3 \end{pmatrix}+
+S_xD_xS_u\begin{pmatrix} f_3 \\ f_4 \end{pmatrix}+
+S_xD_u\begin{pmatrix} f_4 \\ f_5 \end{pmatrix}
+S_u\begin{pmatrix} f_5 \\ f_6 \end{pmatrix}
+\end{equation}
+\end{comment}
+\begin{equation}
+x_{2n}=
+(S_xD_x)^nx_0+
+\sum\limits_{k=0}^{n-1}{(S_xD_x)^{n-1-k}}S_xD_u
+\begin{pmatrix} f_2k \\ f_{2k+1} \end{pmatrix}+
+\sum\limits_{k=0}^{n-1}{(S_xD_x)^{n-1-k}}S_u
+\begin{pmatrix} f_{2k+1} \\ f_{2k+2} \end{pmatrix}
+\end{equation}
+
+\begin{equation}
+x_{2n+1}=
+(S_xD_x)^nD_xx_0+
+\sum\limits_{k=0}^{n}{(D_xS_x)^{n-k}}D_u
+\begin{pmatrix} f_2k \\ f_{2k+1} \end{pmatrix}+
+\sum\limits_{k=0}^{n-1}{(D_xS_x)^{n-k}}D_u
+\begin{pmatrix} f_{2k+1} \\ f_{2k+2} \end{pmatrix}
+\end{equation}
+
 
 \end{document}
