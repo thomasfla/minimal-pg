@@ -25,7 +25,7 @@ Avec ses hypothèses, on veut trouver un PG temps réel capable de prédire le p
 
 Trouver les positions de pieds $f_1,...,f_M$ qui font se diriger le COM $c$ avec une vitesse $\dot{c}^*$:
 \begin{equation}\label{problem}
-\min_{ f_1,...,f_M} \sum\limits_{k=1}^n ||f_{k+1}-f_{k}||^2 + \beta||\dot{c_k}-\dot{c}^*||^2
+\min_{ f_1,...,f_M} \sum\limits_{k=1}^n \beta||f_{k+1}-f_{k}||^2 + ||\dot{c_k}-\dot{c}^*||^2
 \end{equation}
 où le COM est calculé analytiquement en résolvant l'équation du pendule inverse linéarisé (LIP):
 \begin{equation}\label{lip}
@@ -84,16 +84,19 @@ Pendant la phase de double support, il y a une transition du centre de pression 
 \begin{equation}
 p(t)=f_0+\frac{(f_1-f_0)}{T_{ss}}t
 \end{equation}
-On remarque que $p(t)$ est une solution particulière de l'équation (\ref{lip}) 
+On remarque que $p(t)$ est alors une solution particulière de l'équation (\ref{lip}) 
 
 La solution est alors de la forme:
 \begin{equation}
-c(t)=(c_0-p_0)\cosh(\omega t)+\dfrac{1}{\omega}\dot{c_0}\sinh(\omega t)+p(t)
+c(t)=(c_0-p_0)\cosh(\omega t)+\dfrac{1}{\omega}(\dot{c_0}-\dot{p}(t))\sinh(\omega t)+p(t)
 \end{equation}
 avec sa dérivée:
 \begin{equation}
-\dot{c}(t)=\omega(c_0-p_0)\sinh(\omega t)+\dot{c_0}\cosh(\omega t)+\dot{p}(t)
+\dot{c}(t)=\omega(c_0-p_0)\sinh(\omega t)+(\dot{c_0}-\dot{p}(t))\cosh(\omega t)+\dot{p}(t)
 \end{equation}
+
+
+
 \begin{equation}
 \begin{bmatrix} 
 c(t) \\
@@ -110,8 +113,8 @@ c_0 \\
 \end{bmatrix} 
 +
 \begin{bmatrix} 
-1-\frac{t}{T_{ss}}-cosh(\omega t) 		  & \frac{t}{T_{ss}} \\
--\omega\sinh(\omega t)-	\frac{1}{T_ss} & -	\frac{1}{T_{ss}}
+1-\cosh(\omega t)+ \frac{1}{T_{DS}}(\frac{1}{\omega}\sinh(\omega t)-t)	& \frac{1}{T_{DS}}(t-\frac{1}{\omega}\sinh(\omega t)) \\
+-\omega\sinh(\omega t)-	\frac{1}{T_{DS}}(\cosh(\omega t)-1) & 	\frac{1}{T_{DS}}(1-\cosh(\omega t))
 \end{bmatrix}
 \begin{bmatrix} 
 f_0 \\
