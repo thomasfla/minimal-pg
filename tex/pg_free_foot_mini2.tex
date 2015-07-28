@@ -20,7 +20,7 @@ Hypothèses:
 \item Orientation des pieds constante
 \end{itemize}
 
-Avec ses hypothèses, on veut trouver un PG temps réel capable de prédire le placement de quelques pas dans le futur, se contrôlant en vitesse de COM.
+Avec ces hypothèses, on veut trouver un PG temps réel capable de prédire le placement de quelques pas dans le futur, se contrôlant en vitesse de COM.
 \section{Définition du problème}
 
 Trouver les positions de pieds $f_1,...,f_M$ qui font se diriger le COM $c$ avec une vitesse $\dot{c}^*$:
@@ -114,7 +114,7 @@ c_0 \\
 +
 \begin{bmatrix} 
 1-\cosh(\omega t)+ \frac{1}{T_{DS}}(\frac{1}{\omega}\sinh(\omega t)-t)	& \frac{1}{T_{DS}}(t-\frac{1}{\omega}\sinh(\omega t)) \\
--\omega\sinh(\omega t)-	\frac{1}{T_{DS}}(\cosh(\omega t)-1) & 	\frac{1}{T_{DS}}(1-\cosh(\omega t))
+-\omega\sinh(\omega t)+	\frac{1}{T_{DS}}(\cosh(\omega t)-1) & 	\frac{1}{T_{DS}}(1-\cosh(\omega t))
 \end{bmatrix}
 \begin{bmatrix} 
 f_0 \\
@@ -191,7 +191,7 @@ S_xD_xS_u\begin{pmatrix} f_1 \\ f_2 \end{pmatrix}+
 S_xD_u\begin{pmatrix} f_2 \\ f_3 \end{pmatrix}+
 S_u\begin{pmatrix} f_3 \\ f_4 \end{pmatrix}
 \end{equation}
-\begin{comment}
+%\begin{comment}
 
 \begin{equation}
 x_5=
@@ -213,7 +213,7 @@ S_xD_xS_u\begin{pmatrix} f_3 \\ f_4 \end{pmatrix}+
 S_xD_u\begin{pmatrix} f_4 \\ f_5 \end{pmatrix}
 S_u\begin{pmatrix} f_5 \\ f_6 \end{pmatrix}
 \end{equation}
-\end{comment}
+%\end{comment}
 \begin{equation}
 x_{2n}=
 (S_xD_x)^nx_0+

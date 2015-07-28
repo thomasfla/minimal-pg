@@ -42,7 +42,6 @@ class PinocchioController(object):
         RPY_RF=np.matrix([[.0],[.0],[.0]])
         SE3_RF=se3.SE3(se3.utils.rpyToMatrix(RPY_RF),XYZ_RF)
 
-
         #_RF________________________________________________________________
         Jlf=self.robot.Jlf(self.q).copy()
         Jlf[:3] = self.robot.Mlf(self.q).rotation * Jlf[:3,:]#Orient in the world base
@@ -100,7 +99,6 @@ class PinocchioController(object):
     #_TASK1 STACK_______________________________________________________
         err1 = np.vstack([errLf,errRf,errCOM,errTrunk])
         J1 = np.vstack([Jlf,Jrf,Jcom,JTrunk])
-        
         #_Posture___________________________________________________________
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
         errpost =  -1 * (self.q-self.robot.q0)[7:]
