@@ -55,7 +55,7 @@ beta_x=3.0
 beta_y=8.0
 
 USE_WIIMOTE=False
-USE_GAMEPAD=False
+USE_GAMEPAD=True
 DISPLAY_PREVIEW=False
 if USE_WIIMOTE:
     import cwiid
@@ -82,7 +82,7 @@ if USE_GAMEPAD:
 sigmaNoisePosition=0.0
 sigmaNoiseVelocity=0.00
 #initialisation of the pg
-pps=300 #point per step
+pps=50 #point per step
 dt=durrationOfStep/pps
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 p=PinocchioControllerAcceleration(dt)
@@ -180,17 +180,18 @@ while(RUN_FLAG):
         t0=time.time()
 
         _,err,errDyn = p.controlLfRfCom(left_foot_xyz,
-                                    right_foot_xyz,
-                                    left_foot_dxdydz,
-                                    right_foot_dxdydz,
-                                    [x[0][0],x[1][0],h],
-                                    0.001)
+                                        left_foot_dxdydz,
+                                        right_foot_xyz,
+                                        right_foot_dxdydz,
+                                        [x[0][0],x[1][0],h],
+                                        [x[0][1],x[1][1],0],                                        
+                                        0.10)
 
-        vect_f.append (err[1,0])
-        vect_df.append(errDyn[1,0])
+        #~ vect_f.append (err[0,0])
+        #~ vect_df.append(errDyn[0,0])
 
-        if (time.time()-t00 > 10.0): #To be del
-            RUN_FLAG=False
+        #~ if (time.time()-t00 > 10.0): #To be del
+            #~ RUN_FLAG=False
         #plt.clf()
     #prepare next point
     lastFoot = currentFoot
@@ -211,4 +212,4 @@ plt.legend()
 plt.show()
 if USE_WIIMOTE:
     wm.close()
-embed()
+
