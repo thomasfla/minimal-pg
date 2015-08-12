@@ -133,8 +133,6 @@ for dc in dcc:
     ddcc.append( (dc-tmp)/(tt[1]-tt[0]) )
     tmp=dc
 
-
-    
 plt.plot(tt,cc,'b',label="$c$")
 plt.plot(tt,dcc,'g',label="$\dotc$")
 
