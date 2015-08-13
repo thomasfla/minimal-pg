@@ -49,13 +49,13 @@ print ("start")
 Nstep=6
 g=9.81
 h=0.63
-durrationOfStep=0.8
+durrationOfStep=0.4
 Dpy=0.20
 beta_x=3.0
 beta_y=8.0
 
 USE_WIIMOTE=False
-USE_GAMEPAD=True
+USE_GAMEPAD=False
 DISPLAY_PREVIEW=False
 if USE_WIIMOTE:
     import cwiid
@@ -179,24 +179,29 @@ while(RUN_FLAG):
             print "not in real time !" + str((time.time()-t0)*1000) + " ms"
         t0=time.time()
 
-        _,err,errDyn = p.controlLfRfCom(left_foot_xyz,
+        currentCOM,v_currentCOM,err,errDyn = p.controlLfRfCom(left_foot_xyz,
                                         left_foot_dxdydz,
                                         right_foot_xyz,
                                         right_foot_dxdydz,
                                         [x[0][0],x[1][0],h],
                                         [x[0][1],x[1][1],0],                                        
-                                        0.10)
+                                        0.9)
+        
+        #~ vect_f.append (err[3,0])
+        #~ vect_df.append(errDyn[3,0])
 
-        #~ vect_f.append (err[0,0])
-        #~ vect_df.append(errDyn[0,0])
-
-        #~ if (time.time()-t00 > 10.0): #To be del
+        #~ if (time.time()-t00 > 4.0): #To be del
             #~ RUN_FLAG=False
-        #plt.clf()
+        #~ #plt.clf()
     #prepare next point
     lastFoot = currentFoot
     p0 = nextFoot 
-    x0 = x
+
+    #~ x0 = [[currentCOM[0,0],currentCOM[1,0]] ,[v_currentCOM[0,0],v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
+    #~ print x0
+    x0 = x # PREVIEW IS OPEN LOOP
+    #~ print x0
+    #~ embed()
     LR = not LR
     
 vect_df_findiff = []

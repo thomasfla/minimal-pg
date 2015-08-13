@@ -6,7 +6,6 @@ import scipy
 from IPython import embed
 class PinocchioControllerAcceleration(object):
     def __init__(self,dt):
-        
         self.dt=dt
         self.robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
         self.robot.initDisplay()
@@ -77,17 +76,17 @@ class PinocchioControllerAcceleration(object):
         errLf,v_errLf = errorInSE3dyn(SE3_LF,self.robot.Mlf(self.q),v_frame,v_ref)
         
         #_COM_______________________________________________________________
-        errCOM = self.robot.com(self.q)[:3]-(np.matrix(Com).T)[:3]
-        Jcom=self.robot.Jcom(self.q)[:3]
+        errCOM = self.robot.com(self.q)-(np.matrix(Com).T)
+        Jcom=self.robot.Jcom(self.q)
         v_com = Jcom*self.v
-        v_errCOM= v_com - (np.matrix(dCom).T)[:3]
+        v_errCOM= v_com - (np.matrix(dCom).T)
         #_Trunk_____________________________________________________________
         idx_Trunk = self.robot.index('root')
 
         #embed()
         MTrunk0=self.robot.position(self.robot.q0,idx_Trunk)
         MTrunk=self.robot.position(self.q,idx_Trunk)
-        errTrunk=errorInSE3(MTrunk0,MTrunk)[3:6]
+        #errTrunk=errorInSE3(MTrunk0,MTrunk)[3:6]
         JTrunk=self.robot.jacobian(self.q,idx_Trunk)[3:6]
         v_frame = self.robot.velocity(self.q,self.v,idx_Trunk)
         v_ref= se3.se3.Motion(np.matrix([.0,.0,.0,.0,.0,.0]).T)
@@ -107,7 +106,7 @@ class PinocchioControllerAcceleration(object):
         
         #~ errpost =  -1 * (self.q-self.robot.q0)[7:]
         #~ embed()
-        
+
     #_TASK2 STACK_______________________________________________________
         err2 = errPost
         v_err2 = v_errPost
@@ -118,24 +117,24 @@ class PinocchioControllerAcceleration(object):
         #~ self.q[7:]
         #~ self.dq[6:]
 
-        
-        
-        
         Kp = K
         Kd = 2*np.sqrt(Kp)
 
         qddot = npl.pinv(J1)*(-Kp * err1 -Kd * v_err1)
-        
+
         Z = null(J1)
         qddot += Z*npl.pinv(J2*Z)*(-(Kp * err2 + Kd * v_err2) - J2*qddot)
         #__Integration______________________________________________________
         #self.v=qdot/self.dt
         #robotint(self.q,qdot)
-
+        #__Saturation_______________________________________________________
+        #~ qddot[qddot> 0.5]= 0.5
+        #~ qddot[qddot<-0.5]=-0.5
+        
         robotdoubleint(self.q,self.dq,qddot,self.dt)
         self.v=self.dq/self.dt
         self.robot.display(self.q)
         self.robot.viewer.gui.refresh()
-        return self.robot.com(self.q) ,errCOM, v_errCOM
+        return self.robot.com(self.q),Jcom*self.v ,errRf,v_errRf
         
 
