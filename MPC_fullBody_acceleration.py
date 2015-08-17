@@ -49,7 +49,7 @@ print ("start")
 Nstep=6
 g=9.81
 h=0.63
-durrationOfStep=0.4
+durrationOfStep=0.8
 Dpy=0.20
 beta_x=3.0
 beta_y=8.0
@@ -82,14 +82,20 @@ if USE_GAMEPAD:
 sigmaNoisePosition=0.0
 sigmaNoiseVelocity=0.00
 #initialisation of the pg
-pps=50 #point per step
+pps=10 #point per step
 dt=durrationOfStep/pps
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 p=PinocchioControllerAcceleration(dt)
 
 v=[1.0,1.0]
-p0=[-0.01,-0.01]
-x0=[[0,0] , [0,0]]
+p0=[0.030287359739836612,0.0]
+#p0=[0.0102606,    -0.01]
+ #0.0102606    -0.096 0.0669995
+ #0.0102606     0.096 0.0669995
+
+initial_com=p.robot.com(p.robot.q0)
+x0=[[initial_com[0,0],initial_com[1,0]] , [0,0]]
+x=x0
 comx=[]
 comy=[]
 
@@ -102,12 +108,22 @@ LR=True
 t0=time.time()
 t00=t0
 RUN_FLAG=True
+debug_com_1=[]
+debug_com_2=[]
+
 while(RUN_FLAG):
     for ev in np.linspace(1.0/pps,1,pps):
         t=durrationOfStep*ev
 
-        [c_x , c_y , d_c_x , d_c_y]         = pg.computeNextCom(p0,x0,t)
+        [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(p0,x,dt)
         x=[[c_x,d_c_x] , [c_y,d_c_y]]
+
+        #~ print x[0][0]
+
+        #~ [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(p0,x0,t)
+        #~ x=[[c_x,d_c_x] , [c_y,d_c_y]]
+        #~ 
+        #~ print x[0][0]
 
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) #add some disturbance!
@@ -136,6 +152,7 @@ while(RUN_FLAG):
                 v[1]=-1.0
             if c_y<-1.0:
                 v[1]=1.0
+                
         steps = pg.computeStepsPosition(ev,p0,v,x,LR)
         currentFoot = [steps[0][0],steps[1][0]]
         nextFoot    = [steps[0][1],steps[1][1]]
@@ -184,23 +201,23 @@ while(RUN_FLAG):
                                         right_foot_xyz,
                                         right_foot_dxdydz,
                                         [x[0][0],x[1][0],h],
-                                        [x[0][1],x[1][1],0],                                        
-                                        0.9)
+                                        [x[0][1],x[1][1],0])
+
+        #~ x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
+
+        debug_com_1.append(currentCOM[1,0])
+        debug_com_2.append(x[1][0])
         
         #~ vect_f.append (err[3,0])
         #~ vect_df.append(errDyn[3,0])
 
-        #~ if (time.time()-t00 > 4.0): #To be del
-            #~ RUN_FLAG=False
+        if (time.time()-t00 > 10.0): #To be del
+            RUN_FLAG=False
         #~ #plt.clf()
     #prepare next point
     lastFoot = currentFoot
     p0 = nextFoot 
-
-    #~ x0 = [[currentCOM[0,0],currentCOM[1,0]] ,[v_currentCOM[0,0],v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
-    #~ print x0
-    x0 = x # PREVIEW IS OPEN LOOP
-    #~ print x0
+    x0 = x 
     #~ embed()
     LR = not LR
     
@@ -209,11 +226,15 @@ tmp=0
 for f_tmp in vect_f:
     vect_df_findiff.append((f_tmp-tmp)/dt)
     tmp=f_tmp
-plt.plot(vect_f,label="err")
+#~ plt.plot(vect_f,label="err")
+#~ plt.hold(True)
+#~ plt.plot(vect_df,label="d_err")
+#~ plt.plot(vect_df_findiff,label="d_err diff fini")
+#~ plt.legend()
 plt.hold(True)
-plt.plot(vect_df,label="d_err")
-plt.plot(vect_df_findiff,label="d_err diff fini")
-plt.legend()
+plt.plot(debug_com_1)
+plt.plot(debug_com_2)
+
 plt.show()
 if USE_WIIMOTE:
     wm.close()

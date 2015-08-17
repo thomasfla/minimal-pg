@@ -83,7 +83,6 @@ class PinocchioControllerAcceleration(object):
         #_Trunk_____________________________________________________________
         idx_Trunk = self.robot.index('root')
 
-        #embed()
         MTrunk0=self.robot.position(self.robot.q0,idx_Trunk)
         MTrunk=self.robot.position(self.q,idx_Trunk)
         #errTrunk=errorInSE3(MTrunk0,MTrunk)[3:6]
@@ -95,17 +94,28 @@ class PinocchioControllerAcceleration(object):
         v_errTrunk=v_errTrunk[3:6]
 
     #_TASK1 STACK_______________________________________________________
-        err1 = np.vstack([errLf,errRf,errCOM,errTrunk])
-        v_err1 = np.vstack([v_errLf,v_errRf,v_errCOM,v_errTrunk])
+        
+        Kp_foot=0.8
+        Kp_com=0.8
+        Kp_Trunk=0.8
+        Kp_post=0.8
+        
+        Kd_foot= 2*np.sqrt(Kp_foot )
+        Kd_com=  2*np.sqrt(Kp_com  )
+        Kd_Trunk=2*np.sqrt(Kp_Trunk)
+        Kd_post= 2*np.sqrt(Kp_post )
+        
+    
+        err1 = np.vstack(  [Kp_foot*errLf  ,Kp_foot*errRf  ,Kp_com*errCOM  ,Kp_Trunk*errTrunk  ])
+        v_err1 = np.vstack([Kd_foot*v_errLf,Kd_foot*v_errRf,Kd_com*v_errCOM,Kd_Trunk*v_errTrunk])
         
         J1 = np.vstack([Jlf,Jrf,Jcom,JTrunk])
         #~ #_Posture___________________________________________________________
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
-        errPost = (self.q-self.robot.q0)[7:]
-        v_errPost = (self.v-self.robot.v0)[6:]
+        errPost =   Kp_post*(self.q-self.robot.q0)[7:]
+        v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
         
         #~ errpost =  -1 * (self.q-self.robot.q0)[7:]
-        #~ embed()
 
     #_TASK2 STACK_______________________________________________________
         err2 = errPost
@@ -117,20 +127,27 @@ class PinocchioControllerAcceleration(object):
         #~ self.q[7:]
         #~ self.dq[6:]
 
-        Kp = K
-        Kd = 2*np.sqrt(Kp)
+        #~ Kp = K
+        #~ Kd = 2*np.sqrt(Kp)
 
-        qddot = npl.pinv(J1)*(-Kp * err1 -Kd * v_err1)
+#test saturation
+        #~ sat_err=0.001
+        #~ err1[err1>sat_err]=sat_err
+        #~ err2[err2>sat_err]=sat_err
+        #~ err1[err1<-sat_err]=-sat_err
+        #~ err2[err2<-sat_err]=-sat_err
+        qddot = npl.pinv(J1)*(-1.0 * err1 -1.0 * v_err1)
+
+        
 
         Z = null(J1)
-        qddot += Z*npl.pinv(J2*Z)*(-(Kp * err2 + Kd * v_err2) - J2*qddot)
-        #__Integration______________________________________________________
-        #self.v=qdot/self.dt
-        #robotint(self.q,qdot)
+        qddot += Z*npl.pinv(J2*Z)*(-(1.0 * err2 + 1.0 * v_err2) - J2*qddot)
+        
+
         #__Saturation_______________________________________________________
         #~ qddot[qddot> 0.5]= 0.5
         #~ qddot[qddot<-0.5]=-0.5
-        
+        #__Integration______________________________________________________
         robotdoubleint(self.q,self.dq,qddot,self.dt)
         self.v=self.dq/self.dt
         self.robot.display(self.q)
