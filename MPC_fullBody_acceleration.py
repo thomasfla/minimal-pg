@@ -15,18 +15,20 @@ print ("start")
 
 #define const
 Nstep=6
-pps=200 #point per step
+pps=50 #point per step
 g=9.81
 h=0.63
-durrationOfStep=0.8
+durrationOfStep=0.4
 Dpy=0.20
 beta_x=3.0 
 beta_y=8.0
 
+N_COM_TO_DISPLAY = 10
+
 USE_WIIMOTE=False
-USE_GAMEPAD=False
-DISPLAY_PREVIEW=False
-STOP_TIME = 5.0
+USE_GAMEPAD=True
+DISPLAY_PREVIEW=True
+STOP_TIME = np.inf
 
 sigmaNoisePosition=0.00
 sigmaNoiseVelocity=0.00
@@ -46,16 +48,27 @@ lastFoot=[0.0102606,0.096]
  #0.0102606    -0.096 0.0669995
  #~ #0.0102606     0.096 0.0669995    
 
-def prepareCapsForPreviewInViewer (robot):
+def prepareCapsForStepPreviewInViewer (robot):
     for i in range(Nstep):
-        robot.viewer.gui.addSphere("world/pinocchio/caps"+str(i),0.05,[0,1,0,0.5])
+        robot.viewer.gui.addSphere("world/pinocchio/capsSteps"+str(i),0.05,[0,1,0,0.5])
 
-def showPreviewInViewer (robot,steps):
+def prepareCapsForComPreviewInViewer (robot):
+    for i in range(N_COM_TO_DISPLAY*Nstep):
+        robot.viewer.gui.addSphere("world/pinocchio/capsCom"+str(i),0.01,[1,0,0,0.5])
+
+def showStepPreviewInViewer (robot,steps):
     for i in range(Nstep):
         XYZ_caps=np.matrix([[steps[0][i]],[steps[1][i]],[.0]])
         RPY_caps=np.matrix([[.0],[.0],[.0]])
         SE3_caps = se3.SE3(se3.utils.rpyToMatrix(RPY_caps),XYZ_caps)
-        robot.viewer.gui.applyConfiguration("world/pinocchio/caps"+str(i),se3.utils.se3ToXYZQUAT(SE3_caps))
+        robot.viewer.gui.applyConfiguration("world/pinocchio/capsSteps"+str(i),se3.utils.se3ToXYZQUAT(SE3_caps))
+        
+def showComPreviewInViewer (robot,COMs):
+    for i in range(len(COMs[0])):
+        XYZ_caps=np.matrix([[COMs[0][i]],[COMs[1][i]],[.0]])
+        RPY_caps=np.matrix([[.0],[.0],[.0]])
+        SE3_caps = se3.SE3(se3.utils.rpyToMatrix(RPY_caps),XYZ_caps)
+        robot.viewer.gui.applyConfiguration("world/pinocchio/capsCom"+str(i),se3.utils.se3ToXYZQUAT(SE3_caps))    
 
 def foot_interpolate(x0,y0,x1,y1,ev,durrationOfStep=1.0):
     dtotal = np.sqrt((x1-x0)**2 + (y1-y0)**2)
@@ -115,7 +128,8 @@ if USE_GAMEPAD:
     else :
         print "No gamepad found"
         USE_GAMEPAD = False
-prepareCapsForPreviewInViewer(p.robot)
+prepareCapsForStepPreviewInViewer(p.robot)
+prepareCapsForComPreviewInViewer(p.robot)
 initial_com=p.robot.com(p.robot.q0)
 x0=[[initial_com[0,0],initial_com[1,0]] , [0,0]]
 x=x0
@@ -180,12 +194,13 @@ while(RUN_FLAG):
                 v[1]=1.0
                 
         steps = pg.computeStepsPosition(ev,p0,v,x,LR)
-        showPreviewInViewer(p.robot,steps)
+        showStepPreviewInViewer(p.robot,steps)
         currentFoot = [steps[0][0],steps[1][0]]
         nextFoot    = [steps[0][1],steps[1][1]]
         
         if DISPLAY_PREVIEW:
-            [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=2)
+            [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=50)
+            showComPreviewInViewer(p.robot,[cc_x,cc_y])
         #plot data
         #plt.axis((-1,5,-1,1))
         #plt.plot(cc_x,cc_y,'g',lw=0.5)
