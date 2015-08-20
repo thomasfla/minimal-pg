@@ -1,3 +1,62 @@
+#!/usr/bin/env python
+    #Minimal PG using only steps positions as parameters
+    #by using analytic solve of LIP dynamic equation
+    
+import pinocchio_controller_acceleration
+reload(pinocchio_controller_acceleration) #reload in case if file has changed
+from pinocchio_controller_acceleration import PinocchioControllerAcceleration
+import pinocchio as se3
+from IPython import embed
+from minimal_pg import PgMini
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+print ("start")
+
+#define const
+Nstep=6
+pps=200 #point per step
+g=9.81
+h=0.63
+durrationOfStep=0.8
+Dpy=0.20
+beta_x=3.0 
+beta_y=8.0
+
+USE_WIIMOTE=False
+USE_GAMEPAD=False
+DISPLAY_PREVIEW=False
+STOP_TIME = 5.0
+
+sigmaNoisePosition=0.00
+sigmaNoiseVelocity=0.00
+#initialisation of the pg
+
+dt=durrationOfStep/pps
+print( "dt= "+str(dt*1000)+"ms")
+pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
+p=PinocchioControllerAcceleration(dt)
+
+v=[1.0,1.0]
+#initial feet positions
+p0      =[0.0102606,-0.096]
+lastFoot=[0.0102606,0.096]
+
+#p0=[0.0102606,    -0.01]
+ #0.0102606    -0.096 0.0669995
+ #~ #0.0102606     0.096 0.0669995    
+
+def prepareCapsForPreviewInViewer (robot):
+    for i in range(Nstep):
+        robot.viewer.gui.addSphere("world/pinocchio/caps"+str(i),0.05,[0,1,0,0.5])
+
+def showPreviewInViewer (robot,steps):
+    for i in range(Nstep):
+        XYZ_caps=np.matrix([[steps[0][i]],[steps[1][i]],[.0]])
+        RPY_caps=np.matrix([[.0],[.0],[.0]])
+        SE3_caps = se3.SE3(se3.utils.rpyToMatrix(RPY_caps),XYZ_caps)
+        robot.viewer.gui.applyConfiguration("world/pinocchio/caps"+str(i),se3.utils.se3ToXYZQUAT(SE3_caps))
+
 def foot_interpolate(x0,y0,x1,y1,ev,durrationOfStep=1.0):
     dtotal = np.sqrt((x1-x0)**2 + (y1-y0)**2)
     alpha = np.arctan2((x1-x0),(y1-y0))
@@ -35,28 +94,6 @@ def foot_interpolate(x0,y0,x1,y1,ev,durrationOfStep=1.0):
 
     return [xo,yo,z,dxo,dyo,dz]
 
-#!/usr/bin/env python
-    #Minimal PG using only steps positions as parameters
-    #by using analytic solve of LIP dynamic equation
-from pinocchio_controller_acceleration import PinocchioControllerAcceleration
-from IPython import embed
-from minimal_pg import PgMini
-import matplotlib.pyplot as plt
-import numpy as np
-import time
-print ("start")
-#define const
-Nstep=6
-g=9.81
-h=0.63
-durrationOfStep=0.8
-Dpy=0.20
-beta_x=3.0
-beta_y=8.0
-
-USE_WIIMOTE=False
-USE_GAMEPAD=False
-DISPLAY_PREVIEW=False
 if USE_WIIMOTE:
     import cwiid
     print "Wiimote : press 1+2"
@@ -78,41 +115,30 @@ if USE_GAMEPAD:
     else :
         print "No gamepad found"
         USE_GAMEPAD = False
-
-sigmaNoisePosition=0.0
-sigmaNoiseVelocity=0.00
-#initialisation of the pg
-pps=10 #point per step
-dt=durrationOfStep/pps
-pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
-p=PinocchioControllerAcceleration(dt)
-
-v=[1.0,1.0]
-p0=[0.030287359739836612,0.0]
-#p0=[0.0102606,    -0.01]
- #0.0102606    -0.096 0.0669995
- #0.0102606     0.096 0.0669995
-
+prepareCapsForPreviewInViewer(p.robot)
 initial_com=p.robot.com(p.robot.q0)
 x0=[[initial_com[0,0],initial_com[1,0]] , [0,0]]
 x=x0
 comx=[]
 comy=[]
 
-lastFoot=p0
-
 vect_f=[]
 vect_df=[]
 LR=True
 #plt.ion()
 t0=time.time()
-t00=t0
-RUN_FLAG=True
+simulationTime=0.0
+
 debug_com_1=[]
 debug_com_2=[]
-
+RUN_FLAG=True
+#~ ev=1.0-1.0/pps
+ev=0.8*pps*(1.0/pps) #start at 80 %
 while(RUN_FLAG):
-    for ev in np.linspace(1.0/pps,1,pps):
+    #~ for ev in np.linspace(1.0/pps,1,pps):
+    while(ev<1.0):
+        ev+=1.0/pps
+        #~ time.sleep(0.3)
         t=durrationOfStep*ev
 
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(p0,x,dt)
@@ -124,7 +150,7 @@ while(RUN_FLAG):
         #~ x=[[c_x,d_c_x] , [c_y,d_c_y]]
         #~ 
         #~ print x[0][0]
-
+        
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) #add some disturbance!
             x[1][0]+=np.random.normal(0,sigmaNoisePosition)
@@ -143,7 +169,7 @@ while(RUN_FLAG):
             v[1]=-my_joystick.get_axis(0)
             if my_joystick.get_button(0) == 1 :
                 RUN_FLAG = False
-        else :
+        else : #Stay in the 2mx2m central box
             if c_x>1.0:
                 v[0]=-1.0
             if c_x<-1.0:
@@ -154,6 +180,7 @@ while(RUN_FLAG):
                 v[1]=1.0
                 
         steps = pg.computeStepsPosition(ev,p0,v,x,LR)
+        showPreviewInViewer(p.robot,steps)
         currentFoot = [steps[0][0],steps[1][0]]
         nextFoot    = [steps[0][1],steps[1][1]]
         
@@ -165,7 +192,7 @@ while(RUN_FLAG):
         #plt.hold(True)
         #plt.plot(steps[0],steps[1],'rD')
         #plt.plot([steps[0][0]],[steps[1][0]],'bD')
-        
+
         #plt.plot([c_x],[c_y],"D")
         #plt.plot(comx,comy,"k")
         #plt.plot([steps[0][1]],[steps[1][1]],"Dy")
@@ -189,11 +216,11 @@ while(RUN_FLAG):
         #plt.plot([left_foot[0] , x[0][0]],[left_foot[1]  ,x[1][0]],"r",lw=10)
         #plt.plot([right_foot[0], x[0][0]],[right_foot[1] ,x[1][0]],"g",lw=10)
         #plt.draw()  
-        FlagRT = False
-        while(time.time()-t0 < (durrationOfStep/pps)):
-            FlagRT = True
-        if not FlagRT :
-            print "not in real time !" + str((time.time()-t0)*1000) + " ms"
+        #~ FlagRT = False
+        #~ while(time.time()-t0 < (durrationOfStep/pps)):
+            #~ FlagRT = True
+        #~ if not FlagRT :
+            #~ print "not in real time !" + str((time.time()-t0)*1000) + " ms"
         t0=time.time()
 
         currentCOM,v_currentCOM,err,errDyn = p.controlLfRfCom(left_foot_xyz,
@@ -204,38 +231,39 @@ while(RUN_FLAG):
                                         [x[0][1],x[1][1],0])
 
         #~ x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
-
-        debug_com_1.append(currentCOM[1,0])
-        debug_com_2.append(x[1][0])
-        
-        #~ vect_f.append (err[3,0])
-        #~ vect_df.append(errDyn[3,0])
-
-        if (time.time()-t00 > 10.0): #To be del
+        #~ debug_com_1.append(currentCOM[1,0])
+        #~ debug_com_2.append(x[1][0])
+        vect_f.append (err[1,0])
+        vect_df.append(errDyn[1,0])
+        simulationTime+=dt
+        if (simulationTime>STOP_TIME): 
             RUN_FLAG=False
         #~ #plt.clf()
+        #~ print p0
     #prepare next point
     lastFoot = currentFoot
     p0 = nextFoot 
     x0 = x 
     #~ embed()
     LR = not LR
+    ev=0.0
     
 vect_df_findiff = []
 tmp=0
 for f_tmp in vect_f:
     vect_df_findiff.append((f_tmp-tmp)/dt)
     tmp=f_tmp
-#~ plt.plot(vect_f,label="err")
-#~ plt.hold(True)
-#~ plt.plot(vect_df,label="d_err")
-#~ plt.plot(vect_df_findiff,label="d_err diff fini")
-#~ plt.legend()
-plt.hold(True)
-plt.plot(debug_com_1)
-plt.plot(debug_com_2)
 
+plt.plot(vect_f,label="err")
+plt.hold(True)
+plt.plot(vect_df,label="d_err")
+plt.plot(vect_df_findiff,label="d_err diff fini")
+plt.legend()
+
+#~ plt.hold(True)
+#~ plt.plot(debug_com_1)
+#~ plt.plot(debug_com_2)
 plt.show()
+
 if USE_WIIMOTE:
     wm.close()
-
