@@ -15,10 +15,10 @@ print ("start")
 
 #define const
 Nstep=6
-pps=50 #point per step
+pps=100 #point per step
 g=9.81
 h=0.63
-durrationOfStep=0.4
+durrationOfStep=0.8
 Dpy=0.20
 beta_x=3.0 
 beta_y=8.0
@@ -194,12 +194,14 @@ while(RUN_FLAG):
                 v[1]=1.0
                 
         steps = pg.computeStepsPosition(ev,p0,v,x,LR)
+        cop=[steps[0][0],steps[1][0]]
+
         showStepPreviewInViewer(p.robot,steps)
         currentFoot = [steps[0][0],steps[1][0]]
         nextFoot    = [steps[0][1],steps[1][1]]
         
         if DISPLAY_PREVIEW:
-            [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=50)
+            [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY)
             showComPreviewInViewer(p.robot,[cc_x,cc_y])
         #plot data
         #plt.axis((-1,5,-1,1))

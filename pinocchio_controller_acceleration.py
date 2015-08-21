@@ -119,7 +119,7 @@ class PinocchioControllerAcceleration(object):
 
 
     #_TASK1 STACK_______________________________________________________
-        K=1000.0
+        K=10000.0
         Kp_foot=K
         Kp_com=K
         Kp_Trunk=K
