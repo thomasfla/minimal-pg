@@ -127,6 +127,9 @@ class PgMini (object):
         #TODO: as A_p_xy does not depend on initial condition, 
         #      can be precomputed same for pinv(.)
 
+
+        #~ embed()
+
         return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
     def computePreviewOfCom(self,steps,alpha=0.0,x0=[[0,0] , [0,0]],N=20):
         '''prepare preview of the com from steps position'''
@@ -204,9 +207,9 @@ import time
 pg = PgMini()               
 
 #solve and return steps placement
-t0=time.time()  #(tic tac mesurement)
-steps = pg.computeStepsPosition() 
-print "compute time: " + str((time.time()-t0)*1e3)  + " milliseconds"
+#~ t0=time.time()  #(tic tac mesurement)
+#~ steps = pg.computeStepsPosition() 
+#~ print "compute time: " + str((time.time()-t0)*1e3)  + " milliseconds"
 
 
 #~ for ery in np.linspace(-0.01,0.01,3):
@@ -220,15 +223,41 @@ print "compute time: " + str((time.time()-t0)*1e3)  + " milliseconds"
         #~ plt.plot(steps[0],steps[1])
         #~ plt.plot(cc_x,cc_y)
         #~ 
+
 p0=[0.0,0.0]
-plt.plot([p0[0]],[p0[1]],"d")
-
-steps = pg.computeStepsPosition(alpha=0.0,p0=[0.0,0.0],v=[1.0,1],LR=True) 
-print p0[0]-steps[0][0]
-print p0[1]-steps[1][0]
-plt.hold(True)
-plt.plot(steps[0],steps[1])
-
-
+v=[1.0,0.0]
+alpha=0.0
+x0=[[0.0,0.5] , [0.0,0.1]]
+dt=pg.durrationOfStep / 10.0
+N=pg.Nstep
+LR=True
+for i in range(5):
+    plt.plot([p0[0]],[p0[1]],"dr")
+    plt.annotate('p0*',xy=(p0[0],p0[1]), xytext = (0, 0), textcoords = 'offset points')
+    steps = pg.computeStepsPosition(alpha,p0,v,x0,LR)
+    print p0[0]-steps[0][0]
+    print p0[1]-steps[1][0]
+    plt.hold(True)
+    plt.plot(steps[0],steps[1],"-d")
+    labels = ['p{0} - t{1}'.format(k,i) for k in range(N)]
+    for label, x, y in zip(labels, steps[0], steps[1]):
+        plt.annotate(
+            label, 
+            xy = (x, y), xytext = (-20, 20),
+            textcoords = 'offset points', ha = 'right', va = 'bottom',
+            bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+            arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+            
+    [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,alpha,x0,20)
+    plt.plot(cc_x,cc_y)
+        
+    #prepare next iteration
+    zmp=[steps[0][0],steps[1][0]]
+    tmp=pg.computeNextCom(p0,x0,dt)
+    x0=[  [ tmp[0],tmp[2] ] , [tmp[1],tmp[3] ]  ]
+    
+    
+    alpha=alpha+1/10.0
+    
 plt.show()
 
