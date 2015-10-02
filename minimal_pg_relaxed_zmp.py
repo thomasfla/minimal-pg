@@ -30,7 +30,7 @@ class PgMini (object):
          be used in an MPC implementation since only one 
          value of the COM trajectory is needed at time 0+dt.
     '''
-    def __init__ (self,Nstep=6,g=9.81,h=0.63,durrationOfStep=0.7,Dpy=0.30,beta_x=1.5,beta_y=5.0):
+    def __init__ (self,Nstep=6,g=9.81,h=0.63,durrationOfStep=1.0,Dpy=0.30,beta_x=1.5,beta_y=5.0):
         self.g               = g       # gravity
         self.h               = h       # com height
         self.Nstep           = Nstep   # Number of steps to predict
@@ -69,6 +69,12 @@ class PgMini (object):
 
         Fx=temporal_Fx(durrationOfStep)                 
         Fu=temporal_Fu(durrationOfStep)  
+        
+        tr=durrationOfStep*(1-alpha)
+        Fx_tr=temporal_Fx(tr)                 
+        Fu_tr=temporal_Fu(tr)  
+        
+        
         x0_x=np.matrix([[x0[0][0]],
                         [x0[0][1]]])
                         
@@ -78,7 +84,11 @@ class PgMini (object):
         A_p1 = np.zeros([Nstep,Nstep])
         for i in range(Nstep):
             for j in range(0, i+1):
-                A_p1[i,j]=(Fx**(i-j)*Fu)[1,0]
+                print (i,j)
+                if (j == 0):
+                    A_p1[i,j]=(Fx**(i-j)*Fu_tr)[1,0]
+                else:
+                    A_p1[i,j]=(Fx**(i-j)*Fu)[1,0]
         A_p2_x = np.zeros([Nstep-1,Nstep])
         A_p2_y = np.zeros([Nstep-1,Nstep])
         for i in range(Nstep-1):
@@ -97,8 +107,8 @@ class PgMini (object):
         b_p1_x = np.zeros([Nstep,1])
         b_p1_y = np.zeros([Nstep,1])
         for i in range(Nstep):
-            b_p1_x[i]=vx - (temporal_Fx(durrationOfStep*(1-alpha)) *  Fx**(i)*x0_x)[1,0] #- p0_x*(Fx**(i)*temporal_Fu(durrationOfStep*(1-alpha)))[1,0]
-            b_p1_y[i]=vy - (temporal_Fx(durrationOfStep*(1-alpha)) *  Fx**(i)*x0_y)[1,0] #- p0_y*(Fx**(i)*temporal_Fu(durrationOfStep*(1-alpha)))[1,0]
+            b_p1_x[i]=vx - (Fx_tr *  Fx**(i)*x0_x)[1,0] #- p0_x*(Fx**(i)*temporal_Fu(durrationOfStep*(1-alpha)))[1,0]
+            b_p1_y[i]=vy - (Fx_tr *  Fx**(i)*x0_y)[1,0] #- p0_y*(Fx**(i)*temporal_Fu(durrationOfStep*(1-alpha)))[1,0]
         b_p2_x = np.zeros([Nstep-1,1])                
         b_p2_y = np.zeros([Nstep-1,1])   
         for i in range(Nstep-1):
@@ -154,11 +164,11 @@ class PgMini (object):
         for i in range(self.Nstep):
             px=steps[0][i]
             py=steps[1][i]
-            for t in np.linspace(0,durrationOfStep*(1-alpha),N):
+            for t in np.linspace(0,durrationOfStep*(1-alpha),int(N*(1-alpha))):
                 c_x   =     (c0_x -px) * np.cosh(w*t) + (d_c0_x/w) * np.sinh(w*t)+px
-                d_c_x = w*(c0_x -px) * np.sinh(w*t) +     d_c0_x * np.cosh(w*t) 
+                d_c_x =   w*(c0_x -px) * np.sinh(w*t) +     d_c0_x * np.cosh(w*t) 
                 c_y   =     (c0_y -py) * np.cosh(w*t) + (d_c0_y/w) * np.sinh(w*t)+py
-                d_c_y = w*(c0_y -py) * np.sinh(w*t) +     d_c0_y * np.cosh(w*t) 
+                d_c_y =   w*(c0_y -py) * np.sinh(w*t) +     d_c0_y * np.cosh(w*t) 
                 tt.append(tk+ t)
                 cc_x.append(    c_x)
                 cc_y.append(    c_y)
@@ -225,39 +235,62 @@ pg = PgMini()
         #~ 
 
 p0=[0.0,0.0]
-v=[1.0,0.0]
+v=[1.0,0.1]
 alpha=0.0
-x0=[[0.0,0.5] , [0.0,0.1]]
-dt=pg.durrationOfStep / 10.0
+x0=[[0.0,0.1] , [0.0,0.1]]
+dt=pg.durrationOfStep / 30.0
 N=pg.Nstep
 LR=True
-for i in range(5):
-    plt.plot([p0[0]],[p0[1]],"dr")
-    plt.annotate('p0*',xy=(p0[0],p0[1]), xytext = (0, 0), textcoords = 'offset points')
-    steps = pg.computeStepsPosition(alpha,p0,v,x0,LR)
-    print p0[0]-steps[0][0]
-    print p0[1]-steps[1][0]
-    plt.hold(True)
-    plt.plot(steps[0],steps[1],"-d")
-    labels = ['p{0} - t{1}'.format(k,i) for k in range(N)]
-    for label, x, y in zip(labels, steps[0], steps[1]):
-        plt.annotate(
-            label, 
-            xy = (x, y), xytext = (-20, 20),
-            textcoords = 'offset points', ha = 'right', va = 'bottom',
-            bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
-            arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-            
-    [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,alpha,x0,20)
-    plt.plot(cc_x,cc_y)
+
+log_zmp_x=[]
+log_zmp_y=[]
+
+for k in range(5): #number of steps to do:
+    for i in range(30): #evolution in the current step
+        plt.figure(1)
+        plt.plot([p0[0]],[p0[1]],"dr")
+        plt.annotate('p0*',xy=(p0[0],p0[1]), xytext = (0, 0), textcoords = 'offset points')
+        plt.plot([x0[0][0]],[x0[1][0]],'Db')
         
-    #prepare next iteration
-    zmp=[steps[0][0],steps[1][0]]
-    tmp=pg.computeNextCom(p0,x0,dt)
-    x0=[  [ tmp[0],tmp[2] ] , [tmp[1],tmp[3] ]  ]
+        
+        steps = pg.computeStepsPosition(alpha,p0,v,x0,LR)
+        print p0[0]-steps[0][0]
+        print p0[1]-steps[1][0]
+        plt.hold(True)
+        #~ plt.plot(steps[0],steps[1],"d")
+        
+        log_zmp_x.append(steps[0][0])
+        log_zmp_y.append(steps[1][0])
+        
+        labels = ['p{0} - t{1}'.format(k,i) for k in range(N)]
+        #~ for label, x, y in zip(labels, steps[0], steps[1]):
+            #~ plt.annotate(
+                #~ label, 
+                #~ xy = (x, y), xytext = (-20, 20),
+                #~ textcoords = 'offset points', ha = 'right', va = 'bottom',
+                #~ bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+                #~ arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+
+        [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,alpha,x0,111)
+        print ('len =')
+        print len(tt)
+        #~ plt.plot(cc_x,cc_y)
+        
+        #~ plt.figure(2)
+        #~ plt.plot(tt,d_cc_y,'-x')
+        #~ plt.plot([alpha*pg.durrationOfStep,alpha*pg.durrationOfStep],[-1,1])
+        
+        #prepare next iteration
+        zmp=[steps[0][0],steps[1][0]]
+        tmp=pg.computeNextCom(zmp,x0,dt)
+        x0=[  [ tmp[0],tmp[2] ] , [tmp[1],tmp[3] ]  ]
+        alpha=alpha+1/30.0
+    #ends the current step:
+    alpha=0.0
+    p0=[steps[0][1],steps[1][1]]
+    LR=not LR
     
-    
-    alpha=alpha+1/10.0
-    
+plt.plot(log_zmp_x,log_zmp_y,'-D')
 plt.show()
+
 
