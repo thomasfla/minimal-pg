@@ -119,7 +119,7 @@ class PinocchioControllerAcceleration(object):
 
 
     #_TASK1 STACK_______________________________________________________
-        K=10000.0
+        K=1000.0
         Kp_foot=K
         Kp_com=K
         Kp_Trunk=K
@@ -129,53 +129,32 @@ class PinocchioControllerAcceleration(object):
         Kd_com=  2*np.sqrt(Kp_com )
         Kd_Trunk=2*np.sqrt(Kp_Trunk) 
         Kd_post= 2*np.sqrt(Kp_post ) 
-        
-    
+
         err1 =   np.vstack([Kp_foot*  errLf, Kp_foot*  errRf, Kp_com*  errCOM, Kp_Trunk*  errTrunk])
         v_err1 = np.vstack([Kd_foot*v_errLf, Kd_foot*v_errRf, Kd_com*v_errCOM, Kd_Trunk*v_errTrunk])
         dJdq1=   np.vstack([         dJdqLf,          dJdqRf,         dJdqCOM,           dJdqTrunk])
 
         J1 = np.vstack([Jlf,Jrf,Jcom,JTrunk])
-        #~ #_Posture___________________________________________________________
+
+    #_TASK2 STACK_______________________________________________________
+        #_Posture___________________________________________________________
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
         errPost =   Kp_post*(self.q-self.robot.q0)[7:]
         v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
-        
-        errpost =  -1 * (self.q-self.robot.q0)[7:]
 
-    #_TASK2 STACK_______________________________________________________
+        errpost =  -1 * (self.q-self.robot.q0)[7:]
         err2 = errPost
         v_err2 = v_errPost
         J2 = Jpost
-        #Hierarchical solve_________________________________________________
-        #qdot = npl.pinv(J1)*-K * err1
-
-        #~ self.q[7:]
-        #~ self.dq[6:]
-
-        #~ Kp = K
-        #~ Kd = 2*np.sqrt(Kp)
-
-#test saturation
-        #~ sat_err=0.001
-        #~ err1[err1>sat_err]=sat_err
-        #~ err2[err2>sat_err]=sat_err
-        #~ err1[err1<-sat_err]=-sat_err
-        #~ err2[err2<-sat_err]=-sat_err
-        
+    #Hierarchical solve_________________________________________________
         qddot = npl.pinv(J1)*(-1.0 * err1 -1.0 * v_err1 - 1.0*dJdq1)
         Z = null(J1)
         qddot += Z*npl.pinv(J2*Z)*(-(1.0 * err2 + 1.0 * v_err2) - J2*qddot)
 
-        #__Saturation_______________________________________________________
-        #~ qddot[qddot> 0.5]= 0.5
-        #~ qddot[qddot<-0.5]=-0.5
-        #__Integration______________________________________________________
-        
         self.a = qddot
         self.v += np.matrix(self.a*self.dt)
         self.robot.increment(self.q, np.matrix(self.v*self.dt))
-        
+
         #~ robotdoubleint(self.q,self.dq,qddot,self.dt)
         #~ self.v=self.dq/self.dt
         

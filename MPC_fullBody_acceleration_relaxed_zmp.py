@@ -3,7 +3,7 @@
     #by using analytic solve of LIP dynamic equation
     
 import pinocchio_controller_acceleration
-reload(pinocchio_controller_acceleration) #reload in case if file has changed
+reload(pinocchio_controller_acceleration) #reload in case file has changed
 from pinocchio_controller_acceleration import PinocchioControllerAcceleration
 import pinocchio as se3
 from IPython import embed
@@ -15,13 +15,12 @@ import time
 print ("start")
 
 #define const
-Nstep=6
-pps=200 #point per step
+Nstep=3
+pps=100 #point per step
 g=9.81
 h=0.63
 durrationOfStep=0.4
 Dpy=0.20
-#~ Dpy=0.0
 
 beta_x=3.0 
 beta_y=8.0
@@ -30,7 +29,8 @@ N_COM_TO_DISPLAY = 10
 
 USE_WIIMOTE=False
 USE_GAMEPAD=True
-DISPLAY_PREVIEW=True
+DISPLAY_PREVIEW=False
+ENABLE_LOGING=False
 STOP_TIME = np.inf
 
 sigmaNoisePosition=0.00
@@ -138,7 +138,7 @@ if USE_GAMEPAD:
 prepareCapsForStepPreviewInViewer(p.robot)
 prepareCapsForComPreviewInViewer(p.robot)
 initial_com=p.robot.com(p.robot.q0)
-x0=[[initial_com[0,0],initial_com[1,0]] , [0,0]]
+x0=[[initial_com[0,0],initial_com[1,0]] , [0.0,0.0]]
 x=x0
 comx=[]
 comy=[]
@@ -152,36 +152,31 @@ simulationTime=0.0
 
 debug_com_1=[]
 debug_com_2=[]
+
+if ENABLE_LOGING:
+    log_comx_mesure=[]
+    log_comx_cmd=[]
+    log_t=[]
 RUN_FLAG=True
 #~ ev=1.0-1.0/pps
-ev=0.0*pps*(1.0/pps) #start at 80 %
+#ev=0.0*pps*(1.0/pps) #start at 80 %
+ev=0.0
+tk=0 
 while(RUN_FLAG):
     #~ for ev in np.linspace(1.0/pps,1,pps):
-    while(ev<1.0):
-        print p0
-        ev+=1.0/pps
+    while(ev<1.0 and RUN_FLAG):
         #~ time.sleep(0.3)
         t=durrationOfStep*ev
 
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
-        x=[[c_x,d_c_x] , [c_y,d_c_y]]
+        x_cmd=[[c_x,d_c_x] , [c_y,d_c_y]] #command to apply
 
-        #~ print x[0][0]
-
-        #~ [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(p0,x0,t)
-        #~ x=[[c_x,d_c_x] , [c_y,d_c_y]]
-        #~ 
-        #~ print x[0][0]
-        
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) #add some disturbance!
             x[1][0]+=np.random.normal(0,sigmaNoisePosition)
         if sigmaNoiseVelocity >0:  
             x[0][1]+=np.random.normal(0,sigmaNoiseVelocity)
             x[1][1]+=np.random.normal(0,sigmaNoiseVelocity)
-        #comx.append(x[0][0])
-        #comy.append(x[1][0])
-        
         if USE_WIIMOTE:
             v[0]=v[0]*0.2 + 0.8*(wm.state['acc'][0]-128)/50.0
             v[1]=v[1]*0.2 + 0.8*(wm.state['acc'][1]-128)/50.0    
@@ -207,24 +202,19 @@ while(RUN_FLAG):
         showStepPreviewInViewer(p.robot,steps)
         currentFoot = p0#[steps[0][0],steps[1][0]]
         nextFoot    = [steps[0][1],steps[1][1]]
-        
+
         if DISPLAY_PREVIEW:
-            [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY)
+            [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY) 
+            #~ embed()
             showComPreviewInViewer(p.robot,[cc_x,cc_y])
-        #plot data
-        #plt.axis((-1,5,-1,1))
-        #plt.plot(cc_x,cc_y,'g',lw=0.5)
-        #plt.hold(True)
-        #plt.plot(steps[0],steps[1],'rD')
-        #plt.plot([steps[0][0]],[steps[1][0]],'bD')
-
-        #plt.plot([c_x],[c_y],"D")
-        #plt.plot(comx,comy,"k")
-        #plt.plot([steps[0][1]],[steps[1][1]],"Dy")
-
+            if ENABLE_LOGING:
+                for i in range(len(tt)):
+                    tt[i]+=tk
+                plt.figure(2)
+                plt.plot(tt[:10],cc_x[:10],'-x')
+        
+        
         [xf,yf,zf,dxf,dyf,dzf] = foot_interpolate(lastFoot[0],lastFoot[1],nextFoot[0],nextFoot[1],ev,durrationOfStep)
-        #plt.plot([xf],[yf],"Dg")
-
         if LR :
             left_foot_xyz    = [ xf, yf, zf]
             left_foot_dxdydz = [dxf,dyf,dzf]
@@ -238,14 +228,6 @@ while(RUN_FLAG):
             
         left_foot=left_foot_xyz[:2]
         right_foot=right_foot_xyz[:2]
-        #plt.plot([left_foot[0] , x[0][0]],[left_foot[1]  ,x[1][0]],"r",lw=10)
-        #plt.plot([right_foot[0], x[0][0]],[right_foot[1] ,x[1][0]],"g",lw=10)
-        #plt.draw()  
-        #~ FlagRT = False
-        #~ while(time.time()-t0 < (durrationOfStep/pps)):
-            #~ FlagRT = True
-        #~ if not FlagRT :
-            #~ print "not in real time !" + str((time.time()-t0)*1000) + " ms"
         t0=time.time()
         currentCOM,v_currentCOM,err,errDyn = p.controlLfRfCom(left_foot_xyz,
                                         left_foot_dxdydz,
@@ -253,17 +235,24 @@ while(RUN_FLAG):
                                         right_foot_dxdydz,
                                         [x[0][0],x[1][0],h],
                                         [x[0][1],x[1][1],0])
-
-        x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
-        #~ debug_com_1.append(currentCOM[1,0])
-        #~ debug_com_2.append(x[1][0])
-        vect_f.append (err[1,0])
-        vect_df.append(errDyn[1,0])
+        if ENABLE_LOGING:
+            log_t.append(simulationTime)
+            log_comx_mesure.append(currentCOM[0,0])
+            log_comx_cmd.append (x[0][0])
+        #up date the state:
+        #option 1: the state is the wanted command
+        x = x_cmd
+        
+        #option 2: the state is the mesure
+        #~ x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
+        
+        #~ vect_f.append (err[1,0])
+        #~ vect_df.append(errDyn[1,0])
         simulationTime+=dt
+        #~ print simulationTime
         if (simulationTime>STOP_TIME): 
             RUN_FLAG=False
-        #~ #plt.clf()
-        #~ print p0
+        ev+=1.0/pps
     #prepare next point
     lastFoot = currentFoot
     p0 = nextFoot 
@@ -271,23 +260,24 @@ while(RUN_FLAG):
     #~ embed()
     LR = not LR
     ev=0.0
+    tk+=durrationOfStep
     
-vect_df_findiff = []
-tmp=0
-for f_tmp in vect_f:
-    vect_df_findiff.append((f_tmp-tmp)/dt)
-    tmp=f_tmp
-
-plt.plot(vect_f,label="err")
-plt.hold(True)
-plt.plot(vect_df,label="d_err")
-plt.plot(vect_df_findiff,label="d_err diff fini")
-plt.legend()
-
-#~ plt.hold(True)
-#~ plt.plot(debug_com_1)
-#~ plt.plot(debug_com_2)
-#~ plt.show()
-
+#~ vect_df_findiff = []
+#~ tmp=0
+#~ for f_tmp in vect_f:
+    #~ vect_df_findiff.append((f_tmp-tmp)/dt)
+    #~ tmp=f_tmp
+    
 if USE_WIIMOTE:
     wm.close()
+    
+if ENABLE_LOGING:
+    plt.figure(2)
+    plt.hold(True)
+    #plt.title("State = command") 
+    plt.plot(log_t,log_comx_mesure,'-d',label="COMx mesure")
+    plt.plot(log_t,log_comx_cmd,   '-d',label="COMx cmd")
+    plt.legend()
+    plt.show()
+
+
