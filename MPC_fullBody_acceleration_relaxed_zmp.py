@@ -15,11 +15,11 @@ import time
 print ("start")
 
 #define const
-Nstep=3
-pps=100 #point per step
+Nstep=4
+pps=200 #point per step
 g=9.81
 h=0.63
-durrationOfStep=0.4
+durrationOfStep=0.8
 Dpy=0.20
 
 beta_x=3.0 
@@ -29,9 +29,9 @@ N_COM_TO_DISPLAY = 10
 
 USE_WIIMOTE=False
 USE_GAMEPAD=True
-DISPLAY_PREVIEW=False
-ENABLE_LOGING=False
-STOP_TIME = np.inf
+DISPLAY_PREVIEW=True
+ENABLE_LOGING=True
+STOP_TIME = 3.0#np.inf
 
 sigmaNoisePosition=0.00
 sigmaNoiseVelocity=0.00
@@ -170,6 +170,8 @@ while(RUN_FLAG):
 
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
         x_cmd=[[c_x,d_c_x] , [c_y,d_c_y]] #command to apply
+        
+        
 
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) #add some disturbance!
@@ -238,7 +240,7 @@ while(RUN_FLAG):
         if ENABLE_LOGING:
             log_t.append(simulationTime)
             log_comx_mesure.append(currentCOM[0,0])
-            log_comx_cmd.append (x[0][0])
+            log_comx_cmd.append (x_cmd[0][0])
         #up date the state:
         #option 1: the state is the wanted command
         x = x_cmd

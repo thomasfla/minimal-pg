@@ -14,6 +14,7 @@ class PinocchioControllerAcceleration(object):
         self.robot.viewer.gui.refresh()
         self.q =np.copy(self.robot.q0)
         self.v =np.copy(self.robot.v0)
+        self.a =np.copy(self.robot.v0)
         self.dq=np.matrix(np.zeros([self.robot.nv,1]))
         
     def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0]):
@@ -97,7 +98,7 @@ class PinocchioControllerAcceleration(object):
         
         #_COM_______________________________________________________________
         Jcom=self.robot.Jcom(self.q)
-        p_com, v_com, a_com = self.robot.com(self.q,self.v,0*self.v)
+        p_com, v_com, a_com = self.robot.com(self.q,self.v,self.v*0.0)
         errCOM = self.robot.com(self.q)-(np.matrix(Com).T)
         #~ v_com = Jcom*self.v
         v_errCOM= v_com - (np.matrix(dCom).T)
@@ -119,12 +120,12 @@ class PinocchioControllerAcceleration(object):
 
 
     #_TASK1 STACK_______________________________________________________
-        K=1000.0
+        K=100.0
         Kp_foot=K
         Kp_com=K
         Kp_Trunk=K
         Kp_post=K
-        
+
         Kd_foot= 2*np.sqrt(Kp_foot)
         Kd_com=  2*np.sqrt(Kp_com )
         Kd_Trunk=2*np.sqrt(Kp_Trunk) 
