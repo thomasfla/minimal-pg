@@ -19,7 +19,6 @@ class PinocchioControllerAcceleration(object):
         self.lastJcom = self.robot.Jcom(self.q) #to be del.
         
     def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.1,.0,.0]):
-   
         def robotint(q,dq):
             M = se3.SE3(se3.Quaternion(q[6,0],q[3,0],q[4,0],q[5,0]).matrix(),q[:3])
             dM = se3.exp(dq[:6])
@@ -101,25 +100,24 @@ class PinocchioControllerAcceleration(object):
         #_COM_______________________________________________________________
         Jcom=self.robot.Jcom(self.q)
         #testing finite difference dJcom
-        dJcom=(Jcom-self.lastJcom)/self.dt
-
-        self.lastJcom = Jcom
-        
-        p_com, v_com, a_com = self.robot.com(self.q,self.v,self.v*0.0)
-        errCOM = (np.matrix(Com).T)-self.robot.com(self.q)
-        #~ v_com = Jcom*self.v
-        v_errCOM= v_com - (np.matrix(dCom).T)
-        dJdqCOM=-a_com
-        
-        
-        
+        #~ dJcom=(Jcom-self.lastJcom)/self.dt
+        #~ self.lastJcom = Jcom
         #~ print dJcom*self.v
         #~ print dJdqCOM
         #~ print dJcom*self.v-dJdqCOM
         #embed()
         
         
+        p_com, v_com, a_com = self.robot.com(self.q,self.v,self.v*0.0)
+        errCOM = (np.matrix(Com).T)-self.robot.com(self.q)
+        v_errCOM= v_com - (np.matrix(dCom).T)
         
+        errComZ= errCOM[2,0]
+        v_errComZ= v_errCOM[2,0]
+        #~ v_com = Jcom*self.v
+
+        dJdqCOM=-a_com
+
         #_Trunk_____________________________________________________________
         idx_Trunk = self.robot.index('root')
 
@@ -137,7 +135,7 @@ class PinocchioControllerAcceleration(object):
 
 
     #_TASK1 STACK_______________________________________________________
-        K=100.0
+        K=1000.0
         Kp_foot=K
         Kp_com=K
         Kp_Trunk=K
@@ -152,17 +150,13 @@ class PinocchioControllerAcceleration(object):
         #~ v_err1 = np.vstack([Kd_foot*v_errLf, Kd_foot*v_errRf, Kd_com*v_errCOM, Kd_Trunk*v_errTrunk])
         #~ dJdq1=   np.vstack([         dJdqLf,          dJdqRf,         dJdqCOM,           dJdqTrunk])
 
-        errComZ= Com[2]-self.robot.com(self.q)[2,0]
-
-
-
         #~ J1 = np.vstack([Jlf,Jrf,Jcom,JTrunk])
         J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
         Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2]
-                          , Kp_com*errComZ    -         0.0         - 0.0
-                          ,-Kp_foot*errLf     - Kd_foot*v_errLf     - 0.0
-                          ,-Kp_foot*errRf     - Kd_foot*v_errRf     - 0.0
-                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - 0.0])
+                          , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
+                          ,-Kp_foot*errLf     - Kd_foot *v_errLf    - 0*dJdqLf
+                          ,-Kp_foot*errRf     - Kd_foot *v_errRf    - 0*dJdqRf
+                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - 0*dJdqTrunk])
                           
         #~ J1 =    np.vstack([Jcom[:2],Jcom[2]])
         #~ Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2]
@@ -184,14 +178,12 @@ class PinocchioControllerAcceleration(object):
         qddot = npl.pinv(J1)*(Ac1)
         #~ qddot = npl.pinv(Jcom[:2])*(np.matrix(ddCom).T[:2] - dJdqCOM[:2])
 
-        
         #~ qddot = npl.pinv(J1)*(Ac1)
         
         dt2=self.dt**2
         dt=self.dt
         #~ qddot = npl.pinv(Jcom)*(-1)*(np.matrix(ddCom).T - dJdqCOM)
         #~ qddot = npl.pinv(Jcom)*(-1)*(np.matrix(ddCom).T -errCOM/dt2 - dJdqCOM)
-        
         #~ embed()
         Z = null(J1)
         #~ Z = null(Jcom)

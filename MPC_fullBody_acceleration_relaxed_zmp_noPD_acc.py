@@ -15,25 +15,25 @@ import time
 print ("start")
 
 #define const
-Nstep=4
-pps=300 #point per step
-g=9.81
-h=0.63
-durrationOfStep=1.0
+Nstep=4 #number of step in preview
+pps=40  #point per step
+g=9.81  #(m.s-2) gravity
+h=0.63  #(m) Heigth of COM
+durrationOfStep=0.4 #(s) time of a step
 Dpy=0.20
 
 beta_x=3.0 
 beta_y=8.0
 
-N_COM_TO_DISPLAY = 10
+N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
 USE_WIIMOTE=False
 USE_GAMEPAD=True
-DISPLAY_PREVIEW=False
-ENABLE_LOGING=True
-STOP_TIME = 5.0#np.inf
+DISPLAY_PREVIEW=True
+ENABLE_LOGING=False
+STOP_TIME = np.inf
 
-sigmaNoisePosition=0.00
+sigmaNoisePosition=0.00 #optional noise on COM measurement
 sigmaNoiseVelocity=0.00
 #initialisation of the pg
 
@@ -48,9 +48,7 @@ p0      =[0.0102606,-0.096]
 cop=p0
 lastFoot=[0.0102606,0.096]
 
-#p0=[0.0102606,    -0.01]
- #0.0102606    -0.096 0.0669995
- #~ #0.0102606     0.096 0.0669995    
+ 
 
 def prepareCapsForStepPreviewInViewer (robot):
     for i in range(Nstep):
@@ -78,6 +76,7 @@ def showComPreviewInViewer (robot,COMs):
         robot.viewer.gui.applyConfiguration("world/pinocchio/capsCom"+str(i),se3.utils.se3ToXYZQUAT(SE3_caps))    
 
 def foot_interpolate(x0,y0,x1,y1,ev,durrationOfStep=1.0):
+    '''how to reach a foot position (here using circular and linear profiles)'''
     dtotal = np.sqrt((x1-x0)**2 + (y1-y0)**2)
     alpha = np.arctan2((x1-x0),(y1-y0))
     r=0.05
@@ -150,9 +149,10 @@ LR=True
 t0=time.time()
 simulationTime=0.0
 
-debug_com_1=[]
-debug_com_2=[]
-
+disturb_cx=.0
+disturb_cy=.0
+disturb_dcx=.0
+disturb_dcy=.0
 if ENABLE_LOGING:
     log_comx_mesure=[]
     log_comx_cmd=[]
@@ -175,18 +175,11 @@ if ENABLE_LOGING:
     
     log_t=[]
 RUN_FLAG=True
-#~ ev=1.0-1.0/pps
-#ev=0.0*pps*(1.0/pps) #start at 80 %
 ev=0.0
 tk=0 
 while(RUN_FLAG):
-    #~ for ev in np.linspace(1.0/pps,1,pps):
     while(ev<1.0 and RUN_FLAG):
-        #~ time.sleep(0.3)
         t=durrationOfStep*ev
-
-
-
         #solve MPC for current state x
         '''extract 1st command to apply, cop position and preview position of com'''
         steps = pg.computeStepsPosition(ev,p0,v,x, LR)
@@ -197,8 +190,6 @@ while(RUN_FLAG):
         w2= pg.g/pg.h
         dd_c_x = w2*( c_x - cop[0] )
         dd_c_y = w2*( c_y - cop[1] )
-        log_dd_c_x.append(dd_c_x)
-        log_dd_c_y.append(dd_c_y)
 
         x_cmd=[[c_x,d_c_x] , [c_y,d_c_y]] #command to apply
         [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY) 
@@ -212,7 +203,11 @@ while(RUN_FLAG):
             #~ plt.subplot(2,2,3)
             #~ plt.plot(tt,d_cc_x,'.') #actual preview           
             #~ plt.subplot(2,2,4)
-            #~ plt.plot(tt,d_cc_y,'.') #actual preview              
+            #~ plt.plot(tt,d_cc_y,'.') #actual preview      
+            
+            log_dd_c_x.append(dd_c_x)
+            log_dd_c_y.append(dd_c_y)
+                    
             log_comx_state.append(    x[0][0])
             log_comx_cmd.append  (x_cmd[0][0])
             log_comy_state.append(    x[1][0])
@@ -224,15 +219,8 @@ while(RUN_FLAG):
             log_vcomy_cmd.append  (x_cmd[1][1])       
             log_t.append(simulationTime)
 
-            
-            
-            #log_comx_mesure.append(currentCOM[0,0])
-        if sigmaNoisePosition >0:     
-            x[0][0]+=np.random.normal(0,sigmaNoisePosition) #add some disturbance!
-            x[1][0]+=np.random.normal(0,sigmaNoisePosition)
-        if sigmaNoiseVelocity >0:  
-            x[0][1]+=np.random.normal(0,sigmaNoiseVelocity)
-            x[1][1]+=np.random.normal(0,sigmaNoiseVelocity)
+
+
         if USE_WIIMOTE:
             v[0]=v[0]*0.2 + 0.8*(wm.state['acc'][0]-128)/50.0
             v[1]=v[1]*0.2 + 0.8*(wm.state['acc'][1]-128)/50.0    
@@ -242,6 +230,14 @@ while(RUN_FLAG):
             v[1]=-my_joystick.get_axis(0)
             if my_joystick.get_button(0) == 1 :
                 RUN_FLAG = False
+            if my_joystick.get_button(4) == 1 :
+                print "perturbation on : Cx - Cy !"  
+                disturb_cx=-my_joystick.get_axis(4)/10.0
+                disturb_cy=-my_joystick.get_axis(3)/10.0
+            if my_joystick.get_button(5) == 1 :   
+                print "perturbation on : dCx - dCy !" 
+                disturb_dcx=-my_joystick.get_axis(4)/10.0
+                disturb_dcy=-my_joystick.get_axis(3)/10.0
         else : #Stay in the 2mx2m central box
             if c_x>1.0:
                 v[0]=-1.0
@@ -251,8 +247,6 @@ while(RUN_FLAG):
                 v[1]=-1.0
             if c_y<-1.0:
                 v[1]=1.0
-                
-
 
         showStepPreviewInViewer(p.robot,steps)
         currentFoot = p0#[steps[0][0],steps[1][0]]
@@ -276,7 +270,7 @@ while(RUN_FLAG):
             right_foot_dxdydz = [dxf,dyf,dzf]
             left_foot_xyz  = [p0[0],p0[1],0.0] #current support foot
             left_foot_dxdydz= [0,0,0]
-            
+
         left_foot=left_foot_xyz[:2]
         right_foot=right_foot_xyz[:2]
         t0=time.time()
@@ -288,16 +282,34 @@ while(RUN_FLAG):
                                         [x_cmd[0][1],x_cmd[1][1],0],
                                         [dd_c_x,dd_c_y,0.0]  
                                         )
-        log_comx_mesure.append(currentCOM[0,0])
-        log_comy_mesure.append(currentCOM[1,0])
-        log_vcomx_mesure.append(v_currentCOM[0,0])
-        log_vcomy_mesure.append(v_currentCOM[1,0])
-        #up date the state:
-        #option 1: the state is the wanted command
+        if (ENABLE_LOGING): 
+            log_comx_mesure.append(currentCOM[0,0])
+            log_comy_mesure.append(currentCOM[1,0])
+            log_vcomx_mesure.append(v_currentCOM[0,0])
+            log_vcomy_mesure.append(v_currentCOM[1,0])
+        #update the state:
+        #option 1: the state is the wanted command___________
         #~ x = x_cmd
-         
-        #option 2: the state is the measure
+        #option 2: the state is the measure__________________
         x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
+        
+        #add some disturbance on COM measurements
+        if sigmaNoisePosition >0:     
+            x[0][0]+=np.random.normal(0,sigmaNoisePosition) 
+            x[1][0]+=np.random.normal(0,sigmaNoisePosition)
+        if sigmaNoiseVelocity >0:  
+            x[0][1]+=np.random.normal(0,sigmaNoiseVelocity)
+            x[1][1]+=np.random.normal(0,sigmaNoiseVelocity)
+            
+        x[0][0]+=disturb_cx
+        x[1][0]+=disturb_cy
+        x[0][1]+=disturb_dcx
+        x[1][1]+=disturb_dcy
+        #RAZ eventual disturb
+        disturb_cx=0.0
+        disturb_cy=0.0
+        disturb_dcx=0.0
+        disturb_dcy=0.0
         
         #~ vect_f.append (err[1,0])
         #~ vect_df.append(errDyn[1,0])
@@ -324,11 +336,8 @@ if USE_WIIMOTE:
     
 if ENABLE_LOGING:
     plt.hold(True)
-    #plt.title("State = command") 
-    #plt.plot(log_t,log_comx_mesure,'-d',label="COMx mesure")
-    log_tp1=log_t[1:]
+    log_tp1=log_t[1:] #log_tp1 is the timing vector from 1*dt to the end
     log_tp1.append(simulationTime)
-    
     plt.subplot(2,2,1)
     plt.plot(log_tp1,log_comx_mesure,   '-d',label="COMx mesure")
     plt.plot(log_tp1,log_comx_cmd,      '-d',label="COMx cmd")
@@ -346,19 +355,14 @@ if ENABLE_LOGING:
     plt.legend()
     plt.subplot(2,2,4)
     plt.plot(log_tp1,log_vcomy_mesure,   '-d',label="VCOMy mesure")
-    plt.plot(log_tp1,log_vcomy_cmd,   '-d',label="VCOMy cmd")
-    plt.plot(log_t,log_vcomy_state, '-.d',label="VCOMy state")
+    plt.plot(log_tp1,log_vcomy_cmd,      '-d',label="VCOMy cmd")
+    plt.plot(log_t,log_vcomy_state,      '-.d',label="VCOMy state")
     plt.legend()
     
-    
-      
-    
-    plt.legend()
-
     plt.figure()
-    plt.plot(log_dd_c_x)
+    #plt.plot(log_dd_c_x)
     plt.figure()
-    plt.plot(log_dd_c_y)
+    #plt.plot(log_dd_c_y)
     
     plt.show()
 
