@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-    #Minimal PG using only steps positions as parameters
-    #by using analytic solve of LIP dynamic equation
-    
-import pinocchio_controller_acceleration
-reload(pinocchio_controller_acceleration) #reload in case file has changed
 from pinocchio_controller_acceleration_noPD_acc import PinocchioControllerAcceleration
 import pinocchio as se3
 from IPython import embed

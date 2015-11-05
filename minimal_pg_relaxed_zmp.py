@@ -124,21 +124,11 @@ class PgMini (object):
         b_p_x=np.vstack([b_p1_x,b_p2_x,b_p3_x])
         b_p_y=np.vstack([b_p1_y,b_p2_y,b_p3_y])
 
-        
-        
         #SOLVE QP: ________________________________________________________
-        #~ p_vect_x=(np.vstack([p0_x,np.dot(np.linalg.pinv(A_p_x),b_p_x)])).T
-        #~ p_vect_y=(np.vstack([p0_y,np.dot(np.linalg.pinv(A_p_y),b_p_y)])).T
-        
+
         p_vect_x=(np.dot(np.linalg.pinv(A_p_x),b_p_x)).T
         p_vect_y=(np.dot(np.linalg.pinv(A_p_y),b_p_y)).T 
         
-        #TODO: as A_p_xy does not depend on initial condition, 
-        #      can be precomputed same for pinv(.)
-
-
-        #~ embed()
-
         return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
     def computePreviewOfCom(self,steps,alpha=0.0,x0=[[0,0] , [0,0]],N=20):
         '''prepare preview of the com from steps position'''
