@@ -16,13 +16,15 @@ print ("start")
 
 #define const
 Nstep=4 #number of step in preview
-pps=40  #point per step
+pps=80  #point per step
 g=9.81  #(m.s-2) gravity
-h=0.63  #(m) Heigth of COM
-durrationOfStep=0.4 #(s) time of a step
+#~ h=0.63  #(m) Heigth of COM
+h=0.80  #(m) Heigth of COM
+
+durrationOfStep=0.8 #(s) time of a step
 Dpy=0.20
 
-beta_x=3.0 
+beta_x=2.0 
 beta_y=8.0
 
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
@@ -48,7 +50,7 @@ p0      =[0.0102606,-0.096]
 cop=p0
 lastFoot=[0.0102606,0.096]
 
- 
+
 
 def prepareCapsForStepPreviewInViewer (robot):
     for i in range(Nstep):
@@ -179,6 +181,7 @@ ev=0.0
 tk=0 
 while(RUN_FLAG):
     while(ev<1.0 and RUN_FLAG):
+        #time.sleep(1)
         t=durrationOfStep*ev
         #solve MPC for current state x
         '''extract 1st command to apply, cop position and preview position of com'''
@@ -280,9 +283,9 @@ while(RUN_FLAG):
                                         right_foot_dxdydz,
                                         [x_cmd[0][0],x_cmd[1][0],h],
                                         [x_cmd[0][1],x_cmd[1][1],0],
-                                        [dd_c_x,dd_c_y,0.0]  
+                                        [dd_c_x,dd_c_y,0.0]
                                         )
-        if (ENABLE_LOGING): 
+        if (ENABLE_LOGING):
             log_comx_mesure.append(currentCOM[0,0])
             log_comy_mesure.append(currentCOM[1,0])
             log_vcomx_mesure.append(v_currentCOM[0,0])

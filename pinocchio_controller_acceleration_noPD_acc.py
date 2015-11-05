@@ -2,12 +2,14 @@ import pinocchio as se3
 import numpy as np
 from pinocchio.utils import *
 from pinocchio.romeo_wrapper import RomeoWrapper
+from pinocchio.reemc_wrapper import ReemcWrapper
 import scipy
 from IPython import embed
 class PinocchioControllerAcceleration(object):
     def __init__(self,dt):
         self.dt=dt
-        self.robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
+        #~ self.robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
+        self.robot = ReemcWrapper("/home/tflayols/devel-src/reemc_wrapper/reemc/reemc.urdf")
         self.robot.initDisplay()
         self.robot.loadDisplayModel("world/pinocchio","pinocchio")
         self.robot.display(self.robot.q0)
@@ -77,23 +79,27 @@ class PinocchioControllerAcceleration(object):
             null_mask = np.concatenate(((s <= eps), np.ones((padding,),dtype=bool)),axis=0)
             null_space = scipy.compress(null_mask, vh, axis=0)
             return scipy.transpose(null_space)
-
-        XYZ_LF=np.array(Lf)+np.array([.0,.0,0.07])
-        RPY_LF=np.matrix([[.0],[.0],[.0]])
-        SE3_LF=se3.SE3(se3.utils.rpyToMatrix(RPY_LF),XYZ_LF)
+            
+        zFeetOffset=self.robot.Mlf(self.robot.q0).translation[2]
         
-        XYZ_RF=np.array(Rf)+np.array([.0,.0,0.07])
-        RPY_RF=np.matrix([[.0],[.0],[.0]])
-        SE3_RF=se3.SE3(se3.utils.rpyToMatrix(RPY_RF),XYZ_RF)
+        XYZ_LF=np.array(Lf)+np.array([.0,.0,zFeetOffset])
+        RPY_LF=np.matrix([[.0],[.0],[.0]])
+        #~ SE3_LF=se3.SE3(se3.utils.rpyToMatrix(RPY_LF),XYZ_LF)
+        SE3_LF=se3.SE3(self.robot.Mlf(self.robot.q0).rotation,XYZ_LF) #in case of reemc, foot orientation is not identity
 
+        XYZ_RF=np.array(Rf)+np.array([.0,.0,zFeetOffset])#np.array([.0,.0,0.07])
+        RPY_RF=np.matrix([[.0],[.0],[.0]])
+        #~ SE3_RF=se3.SE3(se3.utils.rpyToMatrix(RPY_RF),XYZ_RF)
+        SE3_RF=se3.SE3(self.robot.Mrf(self.robot.q0).rotation,XYZ_RF)#in case of reemc, foot orientation is not identity
+        
         #_RF________________________________________________________________
         Jrf=self.robot.Jrf(self.q).copy()
-        Jrf[:3] = self.robot.Mrf(self.q).rotation * Jrf[:3,:]#Orient in the world base
+        #~ Jrf[:3] = self.robot.Mrf(self.q).rotation * Jrf[:3,:]#Orient in the world base
         v_ref= se3.se3.Motion(np.matrix([dRf[0],dRf[1],dRf[2],.0,.0,.0]).T)
         errRf,v_errRf,dJdqRf = errorLinkInSE3dyn(self.robot.rf,SE3_RF,v_ref,self.q,self.v)
         #_LF________________________________________________________________    
         Jlf=self.robot.Jlf(self.q).copy()
-        Jlf[:3] = self.robot.Mlf(self.q).rotation * Jlf[:3,:]#Orient in the world base
+        #~ Jlf[:3] = self.robot.Mlf(self.q).rotation * Jlf[:3,:]#Orient in the world base
         v_ref= se3.se3.Motion(np.matrix([dLf[0],dLf[1],dLf[2],.0,.0,.0]).T)
         errLf,v_errLf,dJdqLf = errorLinkInSE3dyn(self.robot.lf,SE3_LF,v_ref,self.q,self.v)
         
@@ -154,9 +160,9 @@ class PinocchioControllerAcceleration(object):
         J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
         Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2]
                           , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
-                          ,-Kp_foot*errLf     - Kd_foot *v_errLf    - 0*dJdqLf
-                          ,-Kp_foot*errRf     - Kd_foot *v_errRf    - 0*dJdqRf
-                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - 0*dJdqTrunk])
+                          ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
+                          ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
+                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk])
                           
         #~ J1 =    np.vstack([Jcom[:2],Jcom[2]])
         #~ Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2]
