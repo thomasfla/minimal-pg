@@ -114,7 +114,6 @@ class PgMini (object):
             b_p2_x[i]= beta_x *0
             b_p2_y[i]= beta_y*Dpy*(-1)**i #todo: check!
 
-
         b_p3_x=np.zeros([1,1])
         b_p3_y=np.zeros([1,1])
         

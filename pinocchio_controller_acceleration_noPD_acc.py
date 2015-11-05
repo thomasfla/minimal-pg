@@ -17,7 +17,6 @@ class PinocchioControllerAcceleration(object):
         self.q =np.copy(self.robot.q0)
         self.v =np.copy(self.robot.v0)
         self.a =np.copy(self.robot.v0)
-        self.dq=np.matrix(np.zeros([self.robot.nv,1]))
         self.lastJcom = self.robot.Jcom(self.q) #to be del.
         
     def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.1,.0,.0]):
