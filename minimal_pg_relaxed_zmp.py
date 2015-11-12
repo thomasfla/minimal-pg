@@ -39,8 +39,10 @@ class PgMini (object):
         self.beta_x          = beta_x  # Gain of step placement heuristic respect (x)
         self.beta_y          = beta_y  # Gain of step placement heuristic respect (y)
         
-    def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True):
+    def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0):
         gamma=10.0
+        #gamma2=200.0
+        
         #const definitions
         g               = self.g     
         h               = self.h
@@ -54,6 +56,11 @@ class PgMini (object):
         
         p0_x=p0[0]
         p0_y=p0[1]
+        
+        p1_x=p1[0]
+        p1_y=p1[1]
+        
+        
         
         vx= v[0] # speed command
         vy= v[1] # speed command
@@ -96,12 +103,14 @@ class PgMini (object):
                 A_p2_y[i,i]  = beta_y
                 A_p2_y[i,i+1]=-beta_y        
 
-        A_p3=np.zeros([1,Nstep])
+        A_p3=np.zeros([1,Nstep])#p0-p0*
         A_p3[0,0]=gamma
         
-        
-        A_p_x=np.vstack([A_p1,A_p2_x,A_p3])
-        A_p_y=np.vstack([A_p1,A_p2_y,A_p3])
+        A_p4=np.zeros([1,Nstep])#p1-p1*
+        A_p4[0,1]=gamma2
+            
+        A_p_x=np.vstack([A_p1,A_p2_x,A_p3,A_p4])
+        A_p_y=np.vstack([A_p1,A_p2_y,A_p3,A_p4])
 
         b_p1_x = np.zeros([Nstep,1])
         b_p1_y = np.zeros([Nstep,1])
@@ -114,14 +123,18 @@ class PgMini (object):
             b_p2_x[i]= beta_x *0
             b_p2_y[i]= beta_y*Dpy*(-1)**i #todo: check!
 
-        b_p3_x=np.zeros([1,1])
+        b_p3_x=np.zeros([1,1])#p1-p1*
         b_p3_y=np.zeros([1,1])
-        
         b_p3_x[0,0]=gamma*p0_x
         b_p3_y[0,0]=gamma*p0_y
 
-        b_p_x=np.vstack([b_p1_x,b_p2_x,b_p3_x])
-        b_p_y=np.vstack([b_p1_y,b_p2_y,b_p3_y])
+        b_p4_x=np.zeros([1,1])#p1-p1*
+        b_p4_y=np.zeros([1,1])
+        b_p4_x[0,0]=gamma*p1_x
+        b_p4_y[0,0]=gamma*p1_y
+
+        b_p_x=np.vstack([b_p1_x,b_p2_x,b_p3_x,b_p4_x])
+        b_p_y=np.vstack([b_p1_y,b_p2_y,b_p3_y,b_p4_y])
 
         #SOLVE QP: ________________________________________________________
 
