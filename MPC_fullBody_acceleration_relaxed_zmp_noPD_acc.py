@@ -3,7 +3,6 @@ import pinocchio as se3
 from IPython import embed
 from minimal_pg_relaxed_zmp import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
-#~ from minimal_pg import PgMini
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -16,8 +15,8 @@ g=9.81  #(m.s-2) gravity
 #~ h=0.63  #(m) Heigth of COM
 h=0.80  #(m) Heigth of COM
 fh=0.1 #maximum altitude of foot in flying phases 
-
-durrationOfStep=0.8 #(s) time of a step
+ev_foot_const = 0.95# % when the foot target become constant (0.8)
+durrationOfStep=0.8#(s) time of a step
 Dpy=0.20
 
 beta_x=3.0 
@@ -26,9 +25,9 @@ beta_y=8.0
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
 USE_WIIMOTE=False
-USE_GAMEPAD=True
+USE_GAMEPAD=False
 DISPLAY_PREVIEW=True
-ENABLE_LOGING=False
+ENABLE_LOGING=True
 STOP_TIME = np.inf
 
 sigmaNoisePosition=0.00 #optional noise on COM measurement
@@ -39,7 +38,7 @@ dt=durrationOfStep/pps
 print( "dt= "+str(dt*1000)+"ms")
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
 p=PinocchioControllerAcceleration(dt)
-ftg=Foot_trajectory_generator(fh,durrationOfStep * 0.2)
+ftg=Foot_trajectory_generator(fh,durrationOfStep * (1-ev_foot_const))
 v=[1.0,1.0]
 #initial feet positions
 p0      =[0.0102606,-0.096]
@@ -51,6 +50,13 @@ lastFoot=[0.0102606,0.096]
 [foot_dx0 ,foot_dy0] =[0.0,0.0]
 [foot_ddx0,foot_ddy0]=[0.0,0.0]
 
+def cost_on_p1(ev,ev_foot_const):
+    if ev > ev_foot_const:
+        c=1000
+        #~ c= 1/(1-ev+0.0001) - 1/(1-ev_foot_const+0.0001)
+    else:
+        c=0.0
+    return c
 
 def prepareCapsForStepPreviewInViewer (robot):
     for i in range(Nstep):
@@ -77,88 +83,6 @@ def showComPreviewInViewer (robot,COMs):
         SE3_caps = se3.SE3(se3.utils.rpyToMatrix(RPY_caps),XYZ_caps)
         robot.viewer.gui.applyConfiguration("world/pinocchio/capsCom"+str(i),se3.utils.se3ToXYZQUAT(SE3_caps))    
 
-#~ def get_next_foot(x0, dx0, ddx0, y0, dy0, ddy0, x1, y1, t0 , t1 ,  dt):
-    #~ '''how to reach a foot position (here using polynomials profiles)'''
-    #~ h=0.1
-#~ 
-    #~ #coeficients for x and y
-    #~ Ax5=(ddx0*t0**2 - 2*ddx0*t0*t1 - 6*dx0*t0 + ddx0*t1**2 + 6*dx0*t1 + 12*x0 - 12*x1)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ax4=(30*t0*x1 - 30*t0*x0 - 30*t1*x0 + 30*t1*x1 - 2*t0**3*ddx0 - 3*t1**3*ddx0 + 14*t0**2*dx0 - 16*t1**2*dx0 + 2*t0*t1*dx0 + 4*t0*t1**2*ddx0 + t0**2*t1*ddx0)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ax3=(t0**4*ddx0 + 3*t1**4*ddx0 - 8*t0**3*dx0 + 12*t1**3*dx0 + 20*t0**2*x0 - 20*t0**2*x1 + 20*t1**2*x0 - 20*t1**2*x1 + 80*t0*t1*x0 - 80*t0*t1*x1 + 4*t0**3*t1*ddx0 + 28*t0*t1**2*dx0 - 32*t0**2*t1*dx0 - 8*t0**2*t1**2*ddx0)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ax2=-(t1**5*ddx0 + 4*t0*t1**4*ddx0 + 3*t0**4*t1*ddx0 + 36*t0*t1**3*dx0 - 24*t0**3*t1*dx0 + 60*t0*t1**2*x0 + 60*t0**2*t1*x0 - 60*t0*t1**2*x1 - 60*t0**2*t1*x1 - 8*t0**2*t1**3*ddx0 - 12*t0**2*t1**2*dx0)/(2*(t0**2 - 2*t0*t1 + t1**2)*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ax1=-(2*t1**5*dx0 - 2*t0*t1**5*ddx0 - 10*t0*t1**4*dx0 + t0**2*t1**4*ddx0 + 4*t0**3*t1**3*ddx0 - 3*t0**4*t1**2*ddx0 - 16*t0**2*t1**3*dx0 + 24*t0**3*t1**2*dx0 - 60*t0**2*t1**2*x0 + 60*t0**2*t1**2*x1)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ax0= (2*x1*t0**5 - ddx0*t0**4*t1**3 - 10*x1*t0**4*t1 + 2*ddx0*t0**3*t1**4 + 8*dx0*t0**3*t1**3 + 20*x1*t0**3*t1**2 - ddx0*t0**2*t1**5 - 10*dx0*t0**2*t1**4 - 20*x0*t0**2*t1**3 + 2*dx0*t0*t1**5 + 10*x0*t0*t1**4 - 2*x0*t1**5)/(2*(t0**2 - 2*t0*t1 + t1**2)*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-#~ 
-    #~ Ay5=(ddy0*t0**2 - 2*ddy0*t0*t1 - 6*dy0*t0 + ddy0*t1**2 + 6*dy0*t1 + 12*y0 - 12*y1)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ay4=(30*t0*y1 - 30*t0*y0 - 30*t1*y0 + 30*t1*y1 - 2*t0**3*ddy0 - 3*t1**3*ddy0 + 14*t0**2*dy0 - 16*t1**2*dy0 + 2*t0*t1*dy0 + 4*t0*t1**2*ddy0 + t0**2*t1*ddy0)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ay3=(t0**4*ddy0 + 3*t1**4*ddy0 - 8*t0**3*dy0 + 12*t1**3*dy0 + 20*t0**2*y0 - 20*t0**2*y1 + 20*t1**2*y0 - 20*t1**2*y1 + 80*t0*t1*y0 - 80*t0*t1*y1 + 4*t0**3*t1*ddy0 + 28*t0*t1**2*dy0 - 32*t0**2*t1*dy0 - 8*t0**2*t1**2*ddy0)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ay2=-(t1**5*ddy0 + 4*t0*t1**4*ddy0 + 3*t0**4*t1*ddy0 + 36*t0*t1**3*dy0 - 24*t0**3*t1*dy0 + 60*t0*t1**2*y0 + 60*t0**2*t1*y0 - 60*t0*t1**2*y1 - 60*t0**2*t1*y1 - 8*t0**2*t1**3*ddy0 - 12*t0**2*t1**2*dy0)/(2*(t0**2 - 2*t0*t1 + t1**2)*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ay1=-(2*t1**5*dy0 - 2*t0*t1**5*ddy0 - 10*t0*t1**4*dy0 + t0**2*t1**4*ddy0 + 4*t0**3*t1**3*ddy0 - 3*t0**4*t1**2*ddy0 - 16*t0**2*t1**3*dy0 + 24*t0**3*t1**2*dy0 - 60*t0**2*t1**2*y0 + 60*t0**2*t1**2*y1)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-    #~ Ay0= (2*y1*t0**5 - ddy0*t0**4*t1**3 - 10*y1*t0**4*t1 + 2*ddy0*t0**3*t1**4 + 8*dy0*t0**3*t1**3 + 20*y1*t0**3*t1**2 - ddy0*t0**2*t1**5 - 10*dy0*t0**2*t1**4 - 20*y0*t0**2*t1**3 + 2*dy0*t0*t1**5 + 10*y0*t0*t1**4 - 2*y0*t1**5)/(2*(t0**2 - 2*t0*t1 + t1**2)*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
-#~ 
-    #~ #coeficients for z (deterministe)
-    #~ Az6 =         -h/((t1/2)**3*(t1 - t1/2)**3)
-    #~ Az5=    (3*t1*h)/((t1/2)**3*(t1 - t1/2)**3)
-    #~ Az4=-(3*t1**2*h)/((t1/2)**3*(t1 - t1/2)**3)
-    #~ Az3=   (t1**3*h)/((t1/2)**3*(t1 - t1/2)**3)
-    #~ 
-    #~ #get the next point
-    #~ ev=t0+dt
-    #~ 
-    #~ x0  =Ax0 + Ax1*ev + Ax2*ev**2 + Ax3*ev**3 + Ax4*ev**4 + Ax5*ev**5
-    #~ dx0 =Ax1 + 2*Ax2*ev + 3*Ax3*ev**2 + 4*Ax4*ev**3 + 5*Ax5*ev**4
-    #~ ddx0=2*Ax2 + 3*2*Ax3*ev + 4*3*Ax4*ev**2 + 5*4*Ax5*ev**3 
-    #~ 
-    #~ y0  =Ay0 + Ay1*ev + Ay2*ev**2 + Ay3*ev**3 + Ay4*ev**4 + Ay5*ev**5
-    #~ dy0 =Ay1 + 2*Ay2*ev + 3*Ay3*ev**2 + 4*Ay4*ev**3 + 5*Ay5*ev**4
-    #~ ddy0=2*Ay2 + 3*2*Ay3*ev + 4*3*Ay4*ev**2 + 5*4*Ay5*ev**3 
-    #~ 
-    #~ z0  =    Az3*ev**3 +   Az4*ev**4 +     Az5*ev**5 +    Az6*ev**6
-    #~ dz0 =  3*Az3*ev**2 + 4*Az4*ev**3 +   5*Az5*ev**4 +  6*Az6*ev**5
-    #~ ddz0=2*3*Az3*ev+   3*4*Az4*ev**2 + 4*5*Az5*ev**3 +5*6*Az6*ev**4
-    #~ 
-    #~ return [x0,dx0,ddx0  ,  y0,dy0,ddy0  ,  z0,dz0,ddz0] 
-#~ 
-
-
-
-def foot_interpolate(x0,y0,x1,y1,ev,durrationOfStep=1.0):
-    '''how to reach a foot position (here using circular and linear profiles)'''
-    dtotal = np.sqrt((x1-x0)**2 + (y1-y0)**2)
-    alpha = np.arctan2((x1-x0),(y1-y0))
-    r=0.05
-    if (2*r)>dtotal: # in small step, do not go to max height
-        r=dtotal/2
-    d2=dtotal-2*r
-    #p=(ev)*(np.pi+d2/r)/T#corresponding parameter in parametric curve
-    p=(np.pi+d2/r)*(1-np.cos( ev*np.pi))/2 #idem but smoother (v is C0)
-    dp=(np.pi/2)*(d2/r+np.pi)*np.sin(np.pi*ev)/durrationOfStep
-    if (p >= 0         and p < np.pi/2     ):
-        x=(1-np.cos(p))*r
-        z=(np.sin(p))*r
-        dx=np.sin(p)*r*dp
-        dz=np.cos(p)*r*dp 
-    elif (p>=np.pi/2   and p < np.pi/2+d2/r):
-        x=(1+p-(np.pi/2))*r
-        z=r
-        dx=r*dp 
-        dz=0*dp 
-    elif (np.pi/2+d2/r and p < d2/r+np.pi  ):
-        x=d2+(np.sin(p-(np.pi/2+d2/r))+1)*r
-        z=np.cos(p-(np.pi/2+d2/r))*r
-        dx=-np.sin(d2/r - p)*r*dp
-        dz= np.cos(d2/r - p)*r*dp
-    elif (p < 0):
-        return (np.array([x0,y0,0, 0,0,0]))
-    elif (p >= d2/r+np.pi):
-        return (np.array([x1,y1,0 ,0,0,0]))            
-    xo=x0+x*np.sin(alpha) #orient the trajectory #offset x0,y0
-    yo=y0+x*np.cos(alpha)
-    
-    dxo=dx*np.sin(alpha)
-    dyo=dx*np.cos(alpha)
-
-    return [xo,yo,z,dxo,dyo,dz]
 
 if USE_WIIMOTE:
     import cwiid
@@ -186,6 +110,7 @@ prepareCapsForComPreviewInViewer(p.robot)
 initial_com=p.robot.com(p.robot.q0)
 x0=[[initial_com[0,0],initial_com[1,0]] , [0.0,0.0]]
 x=x0
+p1=[.0,.0]
 comx=[]
 comy=[]
 
@@ -222,6 +147,9 @@ if ENABLE_LOGING:
     log_dd_c_x=[]
     log_dd_c_y=[]
     
+    log_right_foot_x=[]
+    log_left_foot_x =[]
+    
     log_t=[]
     
 
@@ -230,11 +158,13 @@ ev=0.0
 tk=0 
 while(RUN_FLAG):
     while(ev<1.0 and RUN_FLAG):
-        #time.sleep(1)
+        #~ time.sleep(.2)
         t=durrationOfStep*ev
         #solve MPC for current state x
+        
+        
         '''extract 1st command to apply, cop position and preview position of com'''
-        steps = pg.computeStepsPosition(ev,p0,v,x, LR)
+        steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1,cost_on_p1(ev,ev_foot_const))
         cop=[steps[0][0],steps[1][0]]
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
 
@@ -306,13 +236,13 @@ while(RUN_FLAG):
             showComPreviewInViewer(p.robot,[cc_x,cc_y])
     
         [foot_x1,foot_y1]=[steps[0][1],steps[1][1]]
-        [foot_x0,foot_dx0,foot_ddx0  ,  foot_y0,foot_dy0,foot_ddy0  ,  foot_z0,foot_dz0,foot_ddz0]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
-           
-        [xf ,yf ,zf ]  =[foot_x0,foot_y0,foot_z0]
+        [foot_x0,foot_dx0,foot_ddx0  ,  foot_y0,foot_dy0,foot_ddy0  ,  foot_z0,foot_dz0,foot_ddz0 , p1_x , p1_y]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
+        p1=[p1_x,p1_y]
+        [xf ,yf ,zf ]=[foot_x0,foot_y0,foot_z0]
         [dxf,dyf,dzf]=[foot_dx0,foot_dy0,foot_dz0]
 
         
-        log_f_poly.append(foot_x0)
+
 
         if LR :
             left_foot_xyz    = [ xf, yf, zf]
@@ -337,6 +267,8 @@ while(RUN_FLAG):
                                         [dd_c_x,dd_c_y,0.0]
                                         )
         if (ENABLE_LOGING):
+            log_right_foot_x.append(right_foot_xyz[0])
+            log_left_foot_x.append(  left_foot_xyz[0])
             log_comx_mesure.append(currentCOM[0,0])
             log_comy_mesure.append(currentCOM[1,0])
             log_vcomx_mesure.append(v_currentCOM[0,0])
@@ -393,6 +325,8 @@ if USE_WIIMOTE:
     wm.close()
     
 if ENABLE_LOGING:
+    #Plot COM and dCOM
+    plt.figure()
     plt.hold(True)
     log_tp1=log_t[1:] #log_tp1 is the timing vector from 1*dt to the end
     log_tp1.append(simulationTime)
@@ -416,12 +350,12 @@ if ENABLE_LOGING:
     plt.plot(log_tp1,log_vcomy_cmd,      '-d',label="VCOMy cmd")
     plt.plot(log_t,log_vcomy_state,      '-.d',label="VCOMy state")
     plt.legend()
-    
+
+    #plot feet trajectories
     plt.figure()
-    #plt.plot(log_dd_c_x)
-    plt.figure()
-    #plt.plot(log_dd_c_y)
-    
+    plt.plot(log_t,log_right_foot_x,label="Right foot x")
+    plt.plot(log_t, log_left_foot_x,label="Left foot x")
+    plt.legend()
+
     plt.show()
-plt.plot(log_f_poly)
-plt.show()
+

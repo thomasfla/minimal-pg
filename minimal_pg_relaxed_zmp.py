@@ -130,8 +130,8 @@ class PgMini (object):
 
         b_p4_x=np.zeros([1,1])#p1-p1*
         b_p4_y=np.zeros([1,1])
-        b_p4_x[0,0]=gamma*p1_x
-        b_p4_y[0,0]=gamma*p1_y
+        b_p4_x[0,0]=gamma2*p1_x
+        b_p4_y[0,0]=gamma2*p1_y
 
         b_p_x=np.vstack([b_p1_x,b_p2_x,b_p3_x,b_p4_x])
         b_p_y=np.vstack([b_p1_y,b_p2_y,b_p3_y,b_p4_y])

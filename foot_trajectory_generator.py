@@ -2,6 +2,7 @@ import numpy as np
 from IPython import embed
 import matplotlib.pyplot as plt
 class Foot_trajectory_generator(object):
+    '''This class provide adaptative 3d trajectory for a foot from (x0,y0) to (x1,y1) using polynoms'''
     def __init__(self,h=0.5,time_adaptative_disabled=0.200):
         #maximum heigth for the z coordonate
         self.h = h 
@@ -14,7 +15,6 @@ class Foot_trajectory_generator(object):
         self.lastCoeffs_x = [0.0,0.0,0.0,0.0,0.0,0.0]
         self.lastCoeffs_y = [0.0,0.0,0.0,0.0,0.0,0.0]
 
-    '''This class provide adaptative 3d trajectory for a foot from (x0,y0) to (x1,y1) using polynoms'''
     def get_next_foot(self, x0, dx0, ddx0, y0, dy0, ddy0, x1, y1, t0 , t1 ,  dt):
         '''how to reach a foot position (here using polynomials profiles)'''
         h=self.h
@@ -44,7 +44,7 @@ class Foot_trajectory_generator(object):
         Az6 =         -h/((t1/2)**3*(t1 - t1/2)**3)
         Az5=    (3*t1*h)/((t1/2)**3*(t1 - t1/2)**3)
         Az4=-(3*t1**2*h)/((t1/2)**3*(t1 - t1/2)**3)
-        Az3=   (t1**3*h)/((t1/2)**3*(t1 - t1/2)**3)
+        Az3=   (t1**3*h)/((t1/2)**3*(t1 - t1/2)**3) 
         
         #get the next point
         ev=t0+dt
@@ -61,7 +61,17 @@ class Foot_trajectory_generator(object):
         dz0 =  3*Az3*ev**2 + 4*Az4*ev**3 +   5*Az5*ev**4 +  6*Az6*ev**5
         ddz0=2*3*Az3*ev+   3*4*Az4*ev**2 + 4*5*Az5*ev**3 +5*6*Az6*ev**4
         
-        return [x0,dx0,ddx0  ,  y0,dy0,ddy0  ,  z0,dz0,ddz0 ] 
+        #get the target point (usefull for inform the MPC when we are not adaptative anymore.
+        ev=t1
+        x1  =Ax0 + Ax1*ev + Ax2*ev**2 + Ax3*ev**3 + Ax4*ev**4 + Ax5*ev**5
+        #~ dx1 =Ax1 + 2*Ax2*ev + 3*Ax3*ev**2 + 4*Ax4*ev**3 + 5*Ax5*ev**4
+        #~ ddx1=2*Ax2 + 3*2*Ax3*ev + 4*3*Ax4*ev**2 + 5*4*Ax5*ev**3 
+        
+        y1  =Ay0 + Ay1*ev + Ay2*ev**2 + Ay3*ev**3 + Ay4*ev**4 + Ay5*ev**5
+        #~ dy1 =Ay1 + 2*Ay2*ev + 3*Ay3*ev**2 + 4*Ay4*ev**3 + 5*Ay5*ev**4
+        #~ ddy1=2*Ay2 + 3*2*Ay3*ev + 4*3*Ay4*ev**2 + 5*4*Ay5*ev**3 
+    
+        return [x0,dx0,ddx0  ,  y0,dy0,ddy0  ,  z0,dz0,ddz0 , x1,y1] 
 
 ftg = Foot_trajectory_generator(0.5,0.1)
 
