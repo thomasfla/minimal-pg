@@ -39,7 +39,7 @@ class PgMini (object):
         self.beta_x          = beta_x  # Gain of step placement heuristic respect (x)
         self.beta_y          = beta_y  # Gain of step placement heuristic respect (y)
         
-    def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0):
+    def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0,RETURN_MATRIX=False):
         gamma=10.0
         #gamma2=200.0
         
@@ -135,13 +135,15 @@ class PgMini (object):
 
         b_p_x=np.vstack([b_p1_x,b_p2_x,b_p3_x,b_p4_x])
         b_p_y=np.vstack([b_p1_y,b_p2_y,b_p3_y,b_p4_y])
-
-        #SOLVE QP: ________________________________________________________
-
-        p_vect_x=(np.dot(np.linalg.pinv(A_p_x),b_p_x)).T
-        p_vect_y=(np.dot(np.linalg.pinv(A_p_y),b_p_y)).T 
-        
-        return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
+        if (RETURN_MATRIX==False):
+            #SOLVE QP: ________________________________________________________
+            p_vect_x=(np.dot(np.linalg.pinv(A_p_x),b_p_x)).T
+            p_vect_y=(np.dot(np.linalg.pinv(A_p_y),b_p_y)).T 
+            return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
+        else:
+            A_MPC = np.vstack([A_p_x,A_p_y])
+            b_MPC = np.vstack([b_p_x,b_p_y])
+            return [A_MPC,b_MPC] 
     def computePreviewOfCom(self,steps,alpha=0.0,x0=[[0,0] , [0,0]],N=20):
         '''prepare preview of the com from steps position'''
         w2= self.g/self.h

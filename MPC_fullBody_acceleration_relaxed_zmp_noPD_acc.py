@@ -164,7 +164,7 @@ while(RUN_FLAG):
         
         
         '''extract 1st command to apply, cop position and preview position of com'''
-        steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1,cost_on_p1(ev,ev_foot_const))
+        steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1,cost_on_p1(ev,ev_foot_const),True)
         cop=[steps[0][0],steps[1][0]]
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
 
@@ -199,8 +199,6 @@ while(RUN_FLAG):
             log_vcomy_state.append(    x[1][1])
             log_vcomy_cmd.append  (x_cmd[1][1])       
             log_t.append(simulationTime)
-
-
 
         if USE_WIIMOTE:
             v[0]=v[0]*0.2 + 0.8*(wm.state['acc'][0]-128)/50.0
