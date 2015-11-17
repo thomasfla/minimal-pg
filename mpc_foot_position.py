@@ -141,6 +141,8 @@ class PgMini (object):
             p_vect_y=(np.dot(np.linalg.pinv(A_p_y),b_p_y)).T 
             return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
         else:
+            print ("yo")
+            embed()
             A_MPC = np.vstack([A_p_x,A_p_y])
             b_MPC = np.vstack([b_p_x,b_p_y])
             return [A_MPC,b_MPC] 

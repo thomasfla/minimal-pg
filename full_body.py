@@ -129,17 +129,36 @@ class PinocchioControllerAcceleration(object):
         Kd_Trunk=2*np.sqrt(Kp_Trunk) 
         Kd_post= 2*np.sqrt(Kp_post ) 
 
-        J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
+        Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
+        errPost =   Kp_post*(self.q-self.robot.q0)[7:]
+        v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
+
+        eps=1e-6 #importance of posture cost
+
+        #~ J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
+        J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
+        #~ embed()
+        #for test, posture is included in 1st task
+        #~ Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2] 
+                          #~ , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
+                          #~ ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
+                          #~ ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
+                          #~ ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk])
+#~ 
         Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2]
                           , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
                           ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
                           ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
-                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk])
+                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk
+                          ,eps*(-errPost  - v_errPost )             ])
+        #~ embed()
+                          
+                          
     #_TASK2 STACK_______________________________________________________
         #_Posture___________________________________________________________
-        Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
-        errPost =   Kp_post*(self.q-self.robot.q0)[7:]
-        v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
+        #~ Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
+        #~ errPost =   Kp_post*(self.q-self.robot.q0)[7:]
+        #~ v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
 
         errpost =  -1 * (self.q-self.robot.q0)[7:]
         err2 = errPost
@@ -150,10 +169,10 @@ class PinocchioControllerAcceleration(object):
         dt2=self.dt**2
         dt=self.dt
 
-        Z = null(J1)
+        #~ Z = null(J1)
 
-        qddot += Z*npl.pinv(J2*Z)*(-(1.0 * err2 + 1.0 * v_err2) - J2*qddot)
-        
+        #~ qddot += Z*npl.pinv(J2*Z)*(-(1.0 * err2 + 1.0 * v_err2) - J2*qddot) #for tests, just one task
+
         self.a = qddot
         self.v += np.matrix(self.a*self.dt)
         self.robot.increment(self.q, np.matrix(self.v*self.dt))

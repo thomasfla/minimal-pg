@@ -1,7 +1,7 @@
-from pinocchio_controller_acceleration_noPD_acc import PinocchioControllerAcceleration
+from full_body import PinocchioControllerAcceleration
 import pinocchio as se3
 from IPython import embed
-from minimal_pg_relaxed_zmp import PgMini
+from mpc_foot_position import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
 import matplotlib.pyplot as plt
 import numpy as np
@@ -164,10 +164,9 @@ while(RUN_FLAG):
         
         
         '''extract 1st command to apply, cop position and preview position of com'''
-        steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1,cost_on_p1(ev,ev_foot_const),True)
+        steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1,cost_on_p1(ev,ev_foot_const),False)
         cop=[steps[0][0],steps[1][0]]
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
-
         w2= pg.g/pg.h
         dd_c_x = w2*( c_x - cop[0] )
         dd_c_y = w2*( c_y - cop[1] )
