@@ -5,22 +5,11 @@ from mpc_foot_position import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
 import matplotlib.pyplot as plt
 import numpy as np
+
+from pinocchio.romeo_wrapper import RomeoWrapper
+from pinocchio.reemc_wrapper import ReemcWrapper
 import time
 print ("start")
-
-#define const
-Nstep=4 #number of step in preview
-pps=80  #point per step
-g=9.81  #(m.s-2) gravity
-#~ h=0.63  #(m) Heigth of COM
-h=0.80  #(m) Heigth of COM
-fh=0.1 #maximum altitude of foot in flying phases 
-ev_foot_const = 0.95# % when the foot target become constant (0.8)
-durrationOfStep=0.8#(s) time of a step
-Dpy=0.20
-
-beta_x=3.0 
-beta_y=8.0
 
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
@@ -28,7 +17,27 @@ USE_WIIMOTE=False
 USE_GAMEPAD=False
 DISPLAY_PREVIEW=True
 ENABLE_LOGING=True
+ROBOT_MODEL="REEMC" 
 STOP_TIME = np.inf
+
+#define const
+Nstep=4 #number of step in preview
+pps=80  #point per step
+g=9.81  #(m.s-2) gravity
+
+if      (ROBOT_MODEL == "ROMEO"):
+    h=0.63  #(m) Heigth of COM
+elif (ROBOT_MODEL == "REEMC"): 
+    h=0.80  #(m) Heigth of COM
+fh=0.1 #maximum altitude of foot in flying phases 
+ev_foot_const = 0.60# % when the foot target become constant (0.8)
+durrationOfStep=0.8#(s) time of a step
+Dpy=0.20
+
+beta_x=3.0
+beta_y=8.0
+
+
 
 sigmaNoisePosition=0.00 #optional noise on COM measurement
 sigmaNoiseVelocity=0.00
@@ -36,8 +45,20 @@ sigmaNoiseVelocity=0.00
 
 dt=durrationOfStep/pps
 print( "dt= "+str(dt*1000)+"ms")
+
+#load robot model
+if      (ROBOT_MODEL == "ROMEO"):
+    robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
+elif (ROBOT_MODEL == "REEMC"): 
+    robot = ReemcWrapper("/home/tflayols/devel-src/reemc_wrapper/reemc/reemc.urdf")
+robot.initDisplay()
+robot.loadDisplayModel("world/pinocchio","pinocchio")
+robot.display(robot.q0)
+
+
+
 pg = PgMini(Nstep,g,h,durrationOfStep,Dpy,beta_x,beta_y)     
-p=PinocchioControllerAcceleration(dt)
+p=PinocchioControllerAcceleration(dt,robot)
 ftg=Foot_trajectory_generator(fh,durrationOfStep * (1-ev_foot_const))
 v=[1.0,1.0]
 #initial feet positions
@@ -52,8 +73,13 @@ lastFoot=[0.0102606,0.096]
 
 def cost_on_p1(ev,ev_foot_const):
     if ev > ev_foot_const:
-        c=1000
-        #~ c= 1/(1-ev+0.0001) - 1/(1-ev_foot_const+0.0001)
+        #~ c=1000
+        #c= 1/(1-ev+0.0001) - 1/(1-ev_foot_const+0.0001)
+        A=100 #gain final
+        a=A/(ev-ev_foot_const)
+        b=A-a
+        c=(ev-ev_foot_const)*A/(1-ev_foot_const)
+        print c
     else:
         c=0.0
     return c
@@ -160,15 +186,15 @@ while(RUN_FLAG):
     while(ev<1.0 and RUN_FLAG):
         #~ time.sleep(.2)
         t=durrationOfStep*ev
+        
+        #************************** M P C ******************************
         #solve MPC for current state x
-        
-        
         '''extract 1st command to apply, cop position and preview position of com'''
         steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1,cost_on_p1(ev,ev_foot_const),False)
         cop=[steps[0][0],steps[1][0]]
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
         w2= pg.g/pg.h
-        dd_c_x = w2*( c_x - cop[0] )
+        dd_c_x = w2*( c_x - cop[0] ) #Information given to the FULL BODY
         dd_c_y = w2*( c_y - cop[1] )
 
         x_cmd=[[c_x,d_c_x] , [c_y,d_c_y]] #command to apply
@@ -255,6 +281,8 @@ while(RUN_FLAG):
         left_foot=left_foot_xyz[:2]
         right_foot=right_foot_xyz[:2]
         t0=time.time()
+        
+        #******************** F U L L   B O D Y ************************
         currentCOM,v_currentCOM,err,errDyn = p.controlLfRfCom(left_foot_xyz,
                                         left_foot_dxdydz,
                                         right_foot_xyz,

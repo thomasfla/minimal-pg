@@ -6,13 +6,9 @@ from pinocchio.reemc_wrapper import ReemcWrapper
 import scipy
 from IPython import embed
 class PinocchioControllerAcceleration(object):
-    def __init__(self,dt):
+    def __init__(self,dt,robot):
         self.dt=dt
-        #~ self.robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
-        self.robot = ReemcWrapper("/home/tflayols/devel-src/reemc_wrapper/reemc/reemc.urdf")
-        self.robot.initDisplay()
-        self.robot.loadDisplayModel("world/pinocchio","pinocchio")
-        self.robot.display(self.robot.q0)
+        self.robot=robot
         self.robot.viewer.gui.refresh()
         self.q =np.copy(self.robot.q0)
         self.v =np.copy(self.robot.v0)
@@ -94,7 +90,6 @@ class PinocchioControllerAcceleration(object):
         #_COM_______________________________________________________________
         Jcom=self.robot.Jcom(self.q)
 
-        
         p_com, v_com, a_com = self.robot.com(self.q,self.v,self.v*0.0)
         errCOM = (np.matrix(Com).T)-self.robot.com(self.q)
         v_errCOM= v_com - (np.matrix(dCom).T)
@@ -132,13 +127,13 @@ class PinocchioControllerAcceleration(object):
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
         errPost =   Kp_post*(self.q-self.robot.q0)[7:]
         v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
-
+        #for test, posture is included in 1st task
         eps=1e-6 #importance of posture cost
 
         #~ J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
         J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
         #~ embed()
-        #for test, posture is included in 1st task
+        
         #~ Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2] 
                           #~ , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
                           #~ ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
