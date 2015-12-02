@@ -6,16 +6,16 @@ from pinocchio.reemc_wrapper import ReemcWrapper
 import scipy
 from IPython import embed
 class PinocchioControllerAcceleration(object):
-    def __init__(self,dt,robot):
+    def __init__(self,dt,robot,q_init):
         self.dt=dt
         self.robot=robot
         self.robot.viewer.gui.refresh()
-        self.q =np.copy(self.robot.q0)
+        self.q =np.copy(q_init) #self.robot.q0)
         self.v =np.copy(self.robot.v0)
         self.a =np.copy(self.robot.v0)
         self.lastJcom = self.robot.Jcom(self.q) #to be del.
         
-    def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.1,.0,.0]):
+    def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],ddLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],ddRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.0,.0,.0]):
         def robotint(q,dq):
             M = se3.SE3(se3.Quaternion(q[6,0],q[3,0],q[4,0],q[5,0]).matrix(),q[:3])
             dM = se3.exp(dq[:6])
@@ -82,11 +82,12 @@ class PinocchioControllerAcceleration(object):
         Jrf=self.robot.Jrf(self.q).copy()
         v_ref= se3.se3.Motion(np.matrix([dRf[0],dRf[1],dRf[2],.0,.0,.0]).T)
         errRf,v_errRf,dJdqRf = errorLinkInSE3dyn(self.robot.rf,SE3_RF,v_ref,self.q,self.v)
+        
         #_LF________________________________________________________________    
         Jlf=self.robot.Jlf(self.q).copy()
         v_ref= se3.se3.Motion(np.matrix([dLf[0],dLf[1],dLf[2],.0,.0,.0]).T)
         errLf,v_errLf,dJdqLf = errorLinkInSE3dyn(self.robot.lf,SE3_LF,v_ref,self.q,self.v)
-        
+        #embed()
         #_COM_______________________________________________________________
         Jcom=self.robot.Jcom(self.q)
 
@@ -137,16 +138,22 @@ class PinocchioControllerAcceleration(object):
         #~ Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2] 
                           #~ , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
                           #~ ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
-                          #~ ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
+                          #~ ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf   
                           #~ ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk])
 #~ 
-        Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2]
-                          , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
-                          ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
+        Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2] #x,y
+                          , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]  #z
+                          #,-0.0*Kp_foot*errLf[:2] - 0.0*Kd_foot *v_errLf[:2] - 0.0*dJdqLf[:2]  #x,y np.matrix(ddLf).T[:2]                  +0.0* dJdqLf[:2] #
+                          #,-0.0*Kp_foot*errLf[2:] - 0.0*Kd_foot *v_errLf[2:] - 0.0*dJdqLf[2:]   #z ,rx,ry,rz    
+                          ,(-1.0*Kp_foot*errLf[0] - 1.0*Kd_foot *v_errLf[0] - 0.0*dJdqLf[0])  #z
+                          ,(-1.0*Kp_foot*errLf[1] - 1.0*Kd_foot *v_errLf[1] - 0.0*dJdqLf[1])     #y
+                          ,(-1.0*Kp_foot*errLf[2] - 1.0*Kd_foot *v_errLf[2] - 0.0*dJdqLf[2])     #x np.matrix(ddLf).T[0]  +1.0* dJdqLf[2]
+                          ,(-1.0*Kp_foot*errLf[3] - 1.0*Kd_foot *v_errLf[3] - 0.0*dJdqLf[3])
+                          ,(-1.0*Kp_foot*errLf[4] - 1.0*Kd_foot *v_errLf[4] - 0.0*dJdqLf[4])
+                          ,(-1.0*Kp_foot*errLf[5] - 1.0*Kd_foot *v_errLf[5] - 0.0*dJdqLf[5])
                           ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
                           ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk
                           ,eps*(-errPost  - v_errPost )             ])
-        #~ embed()
                           
                           
     #_TASK2 STACK_______________________________________________________
@@ -176,4 +183,5 @@ class PinocchioControllerAcceleration(object):
         self.robot.viewer.gui.refresh()
         return self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
         
+
 

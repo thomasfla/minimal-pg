@@ -30,7 +30,7 @@ class PgMini (object):
          be used in an MPC implementation since only one 
          value of the COM trajectory is needed at time 0+dt.
     '''
-    def __init__ (self,Nstep=6,g=9.81,h=0.63,durrationOfStep=1.0,Dpy=0.30,beta_x=1.5,beta_y=5.0):
+    def __init__ (self,Nstep=6,g=9.81,h=0.63,durrationOfStep=1.0,Dpy=0.30,beta_x=1.5,beta_y=5.0,gamma=20.0):
         self.g               = g       # gravity
         self.h               = h       # com height
         self.Nstep           = Nstep   # Number of steps to predict
@@ -38,9 +38,9 @@ class PgMini (object):
         self.Dpy             = Dpy     # absolute y distance from LF to RF
         self.beta_x          = beta_x  # Gain of step placement heuristic respect (x)
         self.beta_y          = beta_y  # Gain of step placement heuristic respect (y)
-        
+        self.gamma           = gamma   # Gain on step cop-p0 cost
     def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0,RETURN_MATRIX=False):
-        gamma=10.0
+        #gamma=20.0
         #gamma2=200.0
         
         #const definitions
@@ -51,6 +51,7 @@ class PgMini (object):
         durrationOfStep = self.durrationOfStep   
         beta_x          = self.beta_x 
         beta_y          = self.beta_y 
+        gamma           = self.gamma
         w2= g/h
         w = np.sqrt(w2)
         
@@ -141,8 +142,6 @@ class PgMini (object):
             p_vect_y=(np.dot(np.linalg.pinv(A_p_y),b_p_y)).T 
             return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
         else:
-            print ("yo")
-            embed()
             A_MPC = np.vstack([A_p_x,A_p_y])
             b_MPC = np.vstack([b_p_x,b_p_y])
             return [A_MPC,b_MPC] 
