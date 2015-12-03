@@ -3,6 +3,7 @@ import numpy as np
 from pinocchio.utils import *
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
+from qpoases import PyQProblemB as QProblemB
 import scipy
 from IPython import embed
 class PinocchioControllerAcceleration(object):
@@ -167,9 +168,27 @@ class PinocchioControllerAcceleration(object):
         v_err2 = v_errPost
         J2 = Jpost
     #Hierarchical solve_________________________________________________
-        qddot = npl.pinv(J1)*(Ac1)
+
         dt2=self.dt**2
         dt=self.dt
+    #Using Least Squares*********************
+        qddot = npl.pinv(J1)*(Ac1)
+    #Using QPoases:**************************
+        A=J1
+        b=Ac1
+        
+        qpb = QProblemB(self.robot.nv)
+        H=np.array( A.T*A).T
+        g=np.array(-A.T*b).T[0]
+        lb=-100000.0*np.ones(self.robot.nv)
+        ub= 100000.0*np.ones(self.robot.nv)
+        #~ embed()
+        qpb.init(H,g,lb,ub,np.array([100]))
+        x_hat2=np.zeros(self.robot.nv)
+        qpb.getPrimalSolution(x_hat2)
+        qddot = np.matrix(x_hat2).T
+   #*****************************************     
+
 
         #~ Z = null(J1)
 
