@@ -39,8 +39,6 @@ def compute_initial_pose(robot):
 
     Rf_des=robot.Mrf(robot.q0)
     Lf_des=robot.Mlf(robot.q0)
-
-    embed()    
     for i in range(1000):
         q=robot.q0.copy()
         
