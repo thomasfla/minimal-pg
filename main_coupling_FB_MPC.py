@@ -21,7 +21,7 @@ USE_GAMEPAD=False
 DISPLAY_PREVIEW=True
 ENABLE_LOGING=True
 ROBOT_MODEL="REEMC" 
-STOP_TIME = 5.0#np.inf
+STOP_TIME = 10.0#np.inf
 
 #define const
 Nstep=4 #number of step in preview
@@ -32,14 +32,13 @@ if   (ROBOT_MODEL == "ROMEO"):
     h=0.63  #(m) Heigth of COM
 elif (ROBOT_MODEL == "REEMC"): 
     h=0.80  #(m) Heigth of COM
-fh=0.001 #maximum altitude of foot in flying phases 
-ev_foot_const = 0.60# % when the foot target become constant (0.8)
+fh=0.0005 #maximum altitude of foot in flying phases 
+ev_foot_const = 0.6# % when the foot target become constant (0.8)
 durrationOfStep=0.8#(s) time of a step
 Dpy=0.20
 beta_x=3.0 #cost on pi-pi+1
 beta_y=8.0
-gamma=25.0
-
+gamma=3.0
 
 sigmaNoisePosition=0.00 #optional noise on COM measurement
 sigmaNoiseVelocity=0.00
@@ -86,7 +85,6 @@ def cost_on_p1(ev,ev_foot_const):
         a=A/(ev-ev_foot_const)
         b=A-a
         c=(ev-ev_foot_const)*A/(1-ev_foot_const)
-        #~ print c
     else:
         c=0.0
     return c
@@ -278,11 +276,11 @@ while(RUN_FLAG):
             if c_y<-1.0:
                 v[1]=1.0
 
-        showStepPreviewInViewer(robot,steps)
-        if DISPLAY_PREVIEW:
+        #~ showStepPreviewInViewer(robot,steps)
+        #~ if DISPLAY_PREVIEW:
             #[tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY) 
             #~ embed()
-            showComPreviewInViewer(robot,[cc_x,cc_y])
+            #~ showComPreviewInViewer(robot,[cc_x,cc_y])
     
         [foot_x1,foot_y1]=[steps[0][1],steps[1][1]]
         [foot_x0,foot_dx0,foot_ddx0  ,  foot_y0,foot_dy0,foot_ddy0  ,  foot_z0,foot_dz0,foot_ddz0 , p1_star_x , p1_star_y]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
@@ -372,6 +370,14 @@ while(RUN_FLAG):
         simulationTime+=dt
         
         #~ print simulationTime
+        
+        #******************** UPDATE DISPLAY ****************************
+        if (it%2==0):
+            robot.display(p.q)
+            robot.viewer.gui.refresh()
+            showStepPreviewInViewer(robot,steps)
+            showComPreviewInViewer(robot,[cc_x,cc_y])
+        
         if (simulationTime>STOP_TIME): 
             RUN_FLAG=False
         #~ ev+=1.0/pps
@@ -431,14 +437,12 @@ if ENABLE_LOGING:
     plt.plot(log_t, log_left_foot_x_mesure,label="Left foot x mesure")
     
     plt.legend()
-    
-    plt.figure()
+    #~ plt.figure()
     plt.plot(log_t,log_p0_x,label="p0 x")
     plt.plot(log_t,log_p1_star_x,label="p1* x")
     plt.plot(log_t,log_p1_x,label="p1 x")
     
     plt.plot(log_t,log_cop_x,label="cop x")
-    
     #plt.plot(log_t, log_left_foot_x,label="Left foot x")
     plt.legend()
     
