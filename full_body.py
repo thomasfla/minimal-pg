@@ -4,6 +4,7 @@ from pinocchio.utils import *
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
 from qpoases import PyQProblemB as QProblemB
+from qpoases import PyQProblem as QProblem
 import scipy
 from IPython import embed
 class PinocchioControllerAcceleration(object):
@@ -130,10 +131,10 @@ class PinocchioControllerAcceleration(object):
         errPost =   Kp_post*(self.q-self.robot.q0)[7:]
         v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
         #for test, posture is included in 1st task
-        eps=1e-6 #importance of posture cost
+        eps=1e-5 #importance of posture cost
 
         #~ J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
-        J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
+        J1 = np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
         #~ embed()
         
         #~ Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2] 
@@ -157,6 +158,16 @@ class PinocchioControllerAcceleration(object):
                           ,eps*(-errPost  - v_errPost )             ])
                           
                           
+    #Overwrite for test
+    
+
+        J1 = np.vstack([Jcom[2],JTrunk,Jlf,Jrf,eps*Jpost])
+        Ac1 =    np.vstack([Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
+                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk
+                          ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
+                          ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
+                          ,eps*(-errPost  - v_errPost )             ])
+                        
     #_TASK2 STACK_______________________________________________________
         #_Posture___________________________________________________________
         #~ Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
@@ -177,29 +188,34 @@ class PinocchioControllerAcceleration(object):
         A=J1
         b=Ac1
         
-        qpb = QProblemB(self.robot.nv)
+        #Equality constrains on com (x and y)
+        
+        lb_A = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]    ).T)[0]
+        ub_A = lb_A
+        A_   = Jcom[:2]
+        
+        qpb = QProblem(self.robot.nv,2)#2 for com
         H=np.array( A.T*A).T
         g=np.array(-A.T*b).T[0]
-        lb=-100000.0*np.ones(self.robot.nv)
-        ub= 100000.0*np.ones(self.robot.nv)
-        #~ embed()
-        qpb.init(H,g,lb,ub,np.array([100]))
+        lb=-500.0*np.ones(self.robot.nv)
+        ub= 500.0*np.ones(self.robot.nv)
+
+        qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([100]))
         x_hat2=np.zeros(self.robot.nv)
         qpb.getPrimalSolution(x_hat2)
         qddot = np.matrix(x_hat2).T
+
    #*****************************************     
 
 
         #~ Z = null(J1)
 
         #~ qddot += Z*npl.pinv(J2*Z)*(-(1.0 * err2 + 1.0 * v_err2) - J2*qddot) #for tests, just one task
-
         self.a = qddot
         self.v += np.matrix(self.a*self.dt)
         self.robot.increment(self.q, np.matrix(self.v*self.dt))
-
-        self.robot.display(self.q)
-        self.robot.viewer.gui.refresh()
+        #~ self.robot.display(self.q)
+        #~ self.robot.viewer.gui.refresh()
         return self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
         
 
