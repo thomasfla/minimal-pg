@@ -21,7 +21,7 @@ USE_GAMEPAD=False
 DISPLAY_PREVIEW=True
 ENABLE_LOGING=True
 ROBOT_MODEL="REEMC" 
-STOP_TIME = 30.0#np.inf
+STOP_TIME = 5.0#np.inf
 
 #define const
 Nstep=4 #number of step in preview
@@ -141,7 +141,7 @@ if USE_GAMEPAD:
 prepareCapsForStepPreviewInViewer(robot)
 prepareCapsForComPreviewInViewer(robot)
 initial_com=robot.com(q_init)
-x0=[[initial_com[0,0],initial_com[1,0]] , [0.0,0.0]]
+x0=[[initial_com[0,0],0.0] , [initial_com[1,0],0.0]]
 x=x0
 p1_star=[.0,.0]
 comx=[]
@@ -240,12 +240,11 @@ while(RUN_FLAG):
 
             log_dd_c_x.append(dd_c_x)
             log_dd_c_y.append(dd_c_y)
-                    
+
             log_comx_state.append(    x[0][0])
             log_comx_cmd.append  (x_cmd[0][0])
             log_comy_state.append(    x[1][0])
             log_comy_cmd.append  (x_cmd[1][0])
-            
             log_vcomx_state.append(    x[0][1])
             log_vcomx_cmd.append  (x_cmd[0][1])
             log_vcomy_state.append(    x[1][1])
