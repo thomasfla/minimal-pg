@@ -17,7 +17,7 @@ class PinocchioControllerAcceleration(object):
         self.a =np.copy(self.robot.v0)
         self.lastJcom = self.robot.Jcom(self.q) #to be del.
         
-    def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],ddLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],ddRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.0,.0,.0]):
+    def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],ddLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],ddRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.0,.0,.0],LR=True):
         def robotint(q,dq):
             M = se3.SE3(se3.Quaternion(q[6,0],q[3,0],q[4,0],q[5,0]).matrix(),q[:3])
             dM = se3.exp(dq[:6])
@@ -143,6 +143,7 @@ class PinocchioControllerAcceleration(object):
                           #~ ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf   
                           #~ ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk])
 #~ 
+
         Ac1=    np.vstack([np.matrix(ddCom).T[:2]                   - dJdqCOM[:2] #x,y
                           , Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]  #z
                           #,-0.0*Kp_foot*errLf[:2] - 0.0*Kd_foot *v_errLf[:2] - 0.0*dJdqLf[:2]  #x,y np.matrix(ddLf).T[:2]                  +0.0* dJdqLf[:2] #
@@ -159,15 +160,49 @@ class PinocchioControllerAcceleration(object):
                           
                           
     #Overwrite for test
-    
-
-        J1 = np.vstack([Jcom[2],JTrunk,Jlf,Jrf,eps*Jpost])
-        Ac1 =    np.vstack([Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
-                          ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk
-                          ,-Kp_foot*errLf     - Kd_foot *v_errLf    - dJdqLf
-                          ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
-                          ,eps*(-errPost  - v_errPost )             ])
+        # memo
+        # errLf[:2]  x and y
+        # errLf[2:]  z and rx and ry and rz
+        
+  
+        if (LR):
+            JflyingFoot     =      Jlf
+            errflyingFoot   =    errLf
+            v_errflyingFoot =  v_errLf
+            dJdqFlyingFoot  =   dJdqLf
+            ddFlyingFoot    =     ddLf[:2]
+            
+            JsupportFoot    =      Jrf
+            errSupportFoot  =    errRf
+            v_errSupportFoot=  v_errRf
+            dJdqSupportFoot =   dJdqRf
+        else:
+            JflyingFoot     =      Jrf
+            errflyingFoot   =    errRf
+            v_errflyingFoot =  v_errRf
+            dJdqFlyingFoot  =   dJdqRf
+            ddFlyingFoot    =     ddRf[:2]
+            
+            JsupportFoot    =      Jlf
+            errSupportFoot  =    errLf
+            v_errSupportFoot=  v_errLf
+            dJdqSupportFoot =   dJdqLf
+            
+        #~ J1 = np.vstack([Jcom[2],JTrunk,Jlf[2:],Jrf,eps*Jpost])
+        #~ Ac1 =    np.vstack([Kp_com*errComZ    - Kd_com  *v_errComZ  - dJdqCOM[2]
+                          #~ ,-Kp_Trunk*errTrunk - Kd_Trunk*v_errTrunk - dJdqTrunk
+                          #~ ,-Kp_foot*errLf[2:]     - Kd_foot *v_errLf[2:]    - dJdqLf[2:]
+                          #~ ,-Kp_foot*errRf     - Kd_foot *v_errRf    - dJdqRf
+                          #~ ,eps*(-errPost  - v_errPost )             ])
                         
+                        
+        J1 = np.vstack([Jcom[2],JTrunk,JflyingFoot[2:],JsupportFoot,eps*Jpost])
+        
+        Ac1 =    np.vstack([Kp_com*errComZ             - Kd_com  *v_errComZ           - dJdqCOM[2]
+                          ,-Kp_Trunk*errTrunk          - Kd_Trunk*v_errTrunk          - dJdqTrunk
+                          ,-Kp_foot*errflyingFoot[2:]  - Kd_foot *v_errflyingFoot[2:] - dJdqFlyingFoot[2:]
+                          ,-Kp_foot*errSupportFoot     - Kd_foot *v_errSupportFoot    - dJdqSupportFoot
+                          ,eps*(-errPost  - v_errPost )             ])
     #_TASK2 STACK_______________________________________________________
         #_Posture___________________________________________________________
         #~ Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
@@ -189,12 +224,18 @@ class PinocchioControllerAcceleration(object):
         b=Ac1
         
         #Equality constrains on com (x and y)
+        lb_Acom = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]    ).T)[0]
+        Acom_   = Jcom[:2]
         
-        lb_A = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]    ).T)[0]
+        #Equality constrains on flying foot
+        lb_AflyingFoot = np.array((  np.matrix(ddFlyingFoot).T[:2]-dJdqFlyingFoot[:2]    ).T)[0]
+        AflyingFoot_   = JflyingFoot[:2]
+
+        A_   = np.vstack([Acom_,AflyingFoot_])
+        lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
         ub_A = lb_A
-        A_   = Jcom[:2]
-        
-        qpb = QProblem(self.robot.nv,2)#2 for com
+
+        qpb = QProblem(self.robot.nv,A_.shape[0])
         H=np.array( A.T*A).T
         g=np.array(-A.T*b).T[0]
         lb=-500.0*np.ones(self.robot.nv)
@@ -204,7 +245,6 @@ class PinocchioControllerAcceleration(object):
         x_hat2=np.zeros(self.robot.nv)
         qpb.getPrimalSolution(x_hat2)
         qddot = np.matrix(x_hat2).T
-
    #*****************************************     
 
 

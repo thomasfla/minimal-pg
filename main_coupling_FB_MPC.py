@@ -20,7 +20,7 @@ USE_WIIMOTE=False
 USE_GAMEPAD=False
 DISPLAY_PREVIEW=True
 ENABLE_LOGING=True
-ROBOT_MODEL="REEMC" 
+ROBOT_MODEL="ROMEO" 
 STOP_TIME = 10.0#np.inf
 
 #define const
@@ -32,7 +32,7 @@ if   (ROBOT_MODEL == "ROMEO"):
     h=0.63  #(m) Heigth of COM
 elif (ROBOT_MODEL == "REEMC"): 
     h=0.80  #(m) Heigth of COM
-fh=0.0005 #maximum altitude of foot in flying phases 
+fh=0.05 #maximum altitude of foot in flying phases 
 ev_foot_const = 0.6# % when the foot target become constant (0.8)
 durrationOfStep=0.8#(s) time of a step
 Dpy=0.20
@@ -282,13 +282,13 @@ while(RUN_FLAG):
             #~ embed()
             #~ showComPreviewInViewer(robot,[cc_x,cc_y])
     
-        [foot_x1,foot_y1]=[steps[0][1],steps[1][1]]
-        [foot_x0,foot_dx0,foot_ddx0  ,  foot_y0,foot_dy0,foot_ddy0  ,  foot_z0,foot_dz0,foot_ddz0 , p1_star_x , p1_star_y]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
-        p1_star=[p1_star_x,p1_star_y]
-        [xf ,yf ,zf ]=   [foot_x0,foot_y0,foot_z0]
-        [dxf,dyf,dzf]=   [foot_dx0,foot_dy0,foot_dz0]
-        [ddxf,ddyf,ddzf]=[foot_ddx0,foot_ddy0,foot_ddz0]
-
+        [foot_x1,foot_y1]=[steps[0][1],steps[1][1]] #Goal for the flying foot
+        [xf,dxf,ddxf  ,  yf,dyf,ddyf  ,  zf,dzf,ddzf , p1_star_x , p1_star_y]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
+        p1_star=[p1_star_x,p1_star_y] #Realistic destination (=Goal if we have time... see "ev_foot_const")
+        #~ [foot_x0,foot_y0,foot_z0] =[xf ,yf ,zf ]
+        #~ [foot_dx0,foot_dy0,foot_dz0]=[dxf,dyf,dzf]
+        #~ [foot_ddx0,foot_ddy0,foot_ddz0]=[ddxf,ddyf,ddzf]
+        
         if LR :
             left_foot_xyz    = [ xf, yf, zf]
             left_foot_dxdydz = [dxf,dyf,dzf]
@@ -316,10 +316,18 @@ while(RUN_FLAG):
                                         right_foot_ddxddyddz,
                                         [x_cmd[0][0],x_cmd[1][0],h],
                                         [x_cmd[0][1],x_cmd[1][1],0],
-                                        [dd_c_x,dd_c_y,0.0]
+                                        [dd_c_x,dd_c_y,0.0],
+                                        LR
                                         )
         current_LF=np.array(  robot.Mlf(p.q).translation  ).flatten().tolist()[:2]
         current_RF=np.array(  robot.Mrf(p.q).translation  ).flatten().tolist()[:2]
+        if (LR):
+            current_flying_foot  = current_RF
+            current_support_foot = current_LF
+        else:
+            current_flying_foot  = current_LF
+            current_support_foot = current_RF
+                
         if (ENABLE_LOGING):
             log_right_foot_x.append(right_foot_xyz[0])
             log_left_foot_x.append(  left_foot_xyz[0])
@@ -337,14 +345,11 @@ while(RUN_FLAG):
             log_p1_y.append(p1[1])
             log_cop_x.append(cop[0])
             log_cop_y.append(cop[1])
-            
-        #update the state:
-        #option 1: the state is the wanted command___________
-        #~ x = x_cmd
-        #option 2: the state is the measure__________________
+
         x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
-        
-        
+      
+            
+        #foot_x0,foot_dx0,foot_ddx0  ,  foot_y0,foot_dy0,foot_ddy0 TODO
         
         
         #add some disturbance on COM measurements
@@ -383,20 +388,16 @@ while(RUN_FLAG):
         #~ ev+=1.0/pps
     #prepare next point
     #current foot position, speed and acceleration
+    embed()
     [foot_x0  ,foot_y0]  =p0
     [foot_dx0 ,foot_dy0] =[0.0,0.0]
     [foot_ddx0,foot_ddy0]=[0.0,0.0]
 
     p0=[xf, yf]
+
     LR = not LR
     ev=0.0
     tk+=durrationOfStep
-    
-#~ vect_df_findiff = []
-#~ tmp=0
-#~ for f_tmp in vect_f:
-    #~ vect_df_findiff.append((f_tmp-tmp)/dt)
-    #~ tmp=f_tmp
     
 if USE_WIIMOTE:
     wm.close()
