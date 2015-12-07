@@ -77,6 +77,9 @@ lastFoot=  initial_LF#[0.0102606,0.096]
 [foot_dx0 ,foot_dy0] =[0.0,0.0]
 [foot_ddx0,foot_ddy0]=[0.0,0.0]
 
+current_flying_foot   = [foot_x0  ,foot_y0]
+v_current_flying_foot = [foot_dx0 ,foot_dy0]
+a_current_flying_foot = [foot_ddx0,foot_ddy0]
 def cost_on_p1(ev,ev_foot_const):
     if ev > ev_foot_const:
         #~ c=1000
@@ -283,12 +286,19 @@ while(RUN_FLAG):
             #~ showComPreviewInViewer(robot,[cc_x,cc_y])
     
         [foot_x1,foot_y1]=[steps[0][1],steps[1][1]] #Goal for the flying foot
+        
+        
+        foot_x0   =   current_flying_foot[0]
+        foot_dx0  = v_current_flying_foot[0]
+        foot_ddx0 = a_current_flying_foot[0]
+        
+        foot_y0   =   current_flying_foot[1]
+        foot_dy0  = v_current_flying_foot[1]
+        foot_ddy0 = a_current_flying_foot[1]
+        
         [xf,dxf,ddxf  ,  yf,dyf,ddyf  ,  zf,dzf,ddzf , p1_star_x , p1_star_y]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
         p1_star=[p1_star_x,p1_star_y] #Realistic destination (=Goal if we have time... see "ev_foot_const")
-        #~ [foot_x0,foot_y0,foot_z0] =[xf ,yf ,zf ]
-        #~ [foot_dx0,foot_dy0,foot_dz0]=[dxf,dyf,dzf]
-        #~ [foot_ddx0,foot_ddy0,foot_ddz0]=[ddxf,ddyf,ddzf]
-        
+
         if LR :
             left_foot_xyz    = [ xf, yf, zf]
             left_foot_dxdydz = [dxf,dyf,dzf]
@@ -319,14 +329,48 @@ while(RUN_FLAG):
                                         [dd_c_x,dd_c_y,0.0],
                                         LR
                                         )
-        current_LF=np.array(  robot.Mlf(p.q).translation  ).flatten().tolist()[:2]
-        current_RF=np.array(  robot.Mrf(p.q).translation  ).flatten().tolist()[:2]
-        if (LR):
+
+        
+        accLf=p.robot.acceleration(p.q,p.v,p.a,p.robot.lf).linear
+        accRf=p.robot.acceleration(p.q,p.v,p.a,p.robot.rf).linear
+        
+        velLf=p.robot.velocity    (p.q,p.v    ,p.robot.lf).linear
+        velRf=p.robot.velocity    (p.q,p.v    ,p.robot.rf).linear
+        
+        posLf=p.robot.position    (p.q        ,p.robot.lf).translation
+        posRf=p.robot.position    (p.q        ,p.robot.rf).translation
+
+        a_current_LF= [accLf[0,0],accLf[1,0]] #acceleration. x,y
+        a_current_RF= [accRf[0,0],accRf[1,0]] #acceleration. x,y
+            
+        v_current_LF= [velLf[0,0],velLf[1,0]] #velocity. x,y
+        v_current_RF= [velRf[0,0],velRf[1,0]] #velocity. x,y
+
+        current_LF  = [posLf[0,0],posLf[1,0]] #position. x,y
+        current_RF  = [posRf[0,0],posRf[1,0]] #position. x,y
+
+        #~ current_LF=np.array(  robot.Mlf(p.q).translation  ).flatten().tolist()[:2]
+        #~ current_RF=np.array(  robot.Mrf(p.q).translation  ).flatten().tolist()[:2]
+        
+        
+        
+        if (not LR):
             current_flying_foot  = current_RF
+            v_current_flying_foot  = v_current_RF
+            a_current_flying_foot  = a_current_RF
+            
             current_support_foot = current_LF
+            v_current_support_foot = v_current_LF
+            a_current_support_foot = a_current_LF
+            
         else:
             current_flying_foot  = current_LF
+            v_current_flying_foot  = v_current_LF
+            a_current_flying_foot  = a_current_LF
+            
             current_support_foot = current_RF
+            v_current_support_foot = v_current_RF
+            a_current_support_foot = a_current_RF
                 
         if (ENABLE_LOGING):
             log_right_foot_x.append(right_foot_xyz[0])
@@ -347,11 +391,9 @@ while(RUN_FLAG):
             log_cop_y.append(cop[1])
 
         x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
-      
-            
-        #foot_x0,foot_dx0,foot_ddx0  ,  foot_y0,foot_dy0,foot_ddy0 TODO
+
         
-        
+
         #add some disturbance on COM measurements
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) 
@@ -388,7 +430,6 @@ while(RUN_FLAG):
         #~ ev+=1.0/pps
     #prepare next point
     #current foot position, speed and acceleration
-    embed()
     [foot_x0  ,foot_y0]  =p0
     [foot_dx0 ,foot_dy0] =[0.0,0.0]
     [foot_ddx0,foot_ddy0]=[0.0,0.0]

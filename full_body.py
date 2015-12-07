@@ -256,6 +256,9 @@ class PinocchioControllerAcceleration(object):
         self.robot.increment(self.q, np.matrix(self.v*self.dt))
         #~ self.robot.display(self.q)
         #~ self.robot.viewer.gui.refresh()
+
+
+
         return self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
         
 
