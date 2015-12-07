@@ -17,7 +17,7 @@ print ("start")
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
 USE_WIIMOTE=False
-USE_GAMEPAD=True
+USE_GAMEPAD=False
 DISPLAY_PREVIEW=True
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
@@ -242,10 +242,10 @@ while(RUN_FLAG):
             log_dd_c_x.append(dd_c_x)
             log_dd_c_y.append(dd_c_y)
 
-            log_comx_state.append(    x[0][0])
-            log_comx_cmd.append  (x_cmd[0][0])
-            log_comy_state.append(    x[1][0])
-            log_comy_cmd.append  (x_cmd[1][0])
+            log_comx_state.append (    x[0][0])
+            log_comx_cmd.append   (x_cmd[0][0])
+            log_comy_state.append (    x[1][0])
+            log_comy_cmd.append   (x_cmd[1][0])
             log_vcomx_state.append(    x[0][1])
             log_vcomx_cmd.append  (x_cmd[0][1])
             log_vcomy_state.append(    x[1][1])
@@ -392,8 +392,6 @@ while(RUN_FLAG):
 
         x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
 
-        
-
         #add some disturbance on COM measurements
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) 
@@ -431,6 +429,23 @@ while(RUN_FLAG):
     #prepare next point
     p0=current_flying_foot 
     LR = not LR
+    if (not LR): #Duplicated code...
+        current_flying_foot  = current_RF
+        v_current_flying_foot  = v_current_RF
+        a_current_flying_foot  = a_current_RF
+            
+        current_support_foot = current_LF
+        v_current_support_foot = v_current_LF
+        a_current_support_foot = a_current_LF
+
+    else:
+        current_flying_foot  = current_LF
+        v_current_flying_foot  = v_current_LF
+        a_current_flying_foot  = a_current_LF
+            
+        current_support_foot = current_RF
+        v_current_support_foot = v_current_RF
+        a_current_support_foot = a_current_RF
     ev=0.0
     tk+=durrationOfStep
     
@@ -444,22 +459,22 @@ if ENABLE_LOGING:
     log_tp1=log_t[1:] #log_tp1 is the timing vector from 1*dt to the end
     log_tp1.append(simulationTime)
     plt.subplot(2,2,1)
-    plt.plot(log_tp1,log_comx_mesure,   '-d',label="COMx mesure")
+    plt.plot(log_tp1,log_comx_mesure,   '-d',label="COMx measure")
     plt.plot(log_tp1,log_comx_cmd,      '-d',label="COMx cmd")
     plt.plot(log_t,log_comx_state,     '-.d',label="COMx state")
     plt.legend()
     plt.subplot(2,2,2)
-    plt.plot(log_tp1,log_comy_mesure,   '-d',label="COMy mesure")
+    plt.plot(log_tp1,log_comy_mesure,   '-d',label="COMy measure")
     plt.plot(log_tp1,log_comy_cmd,      '-d',label="COMy cmd")
     plt.plot(log_t,log_comy_state,     '-.d',label="COMy state")
     plt.legend()
     plt.subplot(2,2,3)
-    plt.plot(log_tp1,log_vcomx_mesure,   '-d',label="VCOMx mesure")
+    plt.plot(log_tp1,log_vcomx_mesure,   '-d',label="VCOMx measure")
     plt.plot(log_tp1,log_vcomx_cmd,      '-d',label="VCOMx cmd")
     plt.plot(log_t,log_vcomx_state,     '-.d',label="VCOMx state")
     plt.legend()
     plt.subplot(2,2,4)
-    plt.plot(log_tp1,log_vcomy_mesure,   '-d',label="VCOMy mesure")
+    plt.plot(log_tp1,log_vcomy_mesure,   '-d',label="VCOMy measure")
     plt.plot(log_tp1,log_vcomy_cmd,      '-d',label="VCOMy cmd")
     plt.plot(log_t,log_vcomy_state,      '-.d',label="VCOMy state")
     plt.legend()
@@ -469,11 +484,11 @@ if ENABLE_LOGING:
     plt.plot(log_t,log_right_foot_x,label="Right foot x")
     plt.plot(log_t, log_left_foot_x,label="Left foot x")
     
-    plt.plot(log_t,log_right_foot_x_mesure,label="Right foot x mesure")
-    plt.plot(log_t, log_left_foot_x_mesure,label="Left foot x mesure")
+    plt.plot(log_t,log_right_foot_x_mesure,label="Right foot x measure")
+    plt.plot(log_t, log_left_foot_x_mesure,label="Left foot x measure")
     
     plt.legend()
-    #~ plt.figure()
+    plt.figure()
     plt.plot(log_t,log_p0_x,label="p0 x")
     plt.plot(log_t,log_p1_star_x,label="p1* x")
     plt.plot(log_t,log_p1_x,label="p1 x")
