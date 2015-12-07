@@ -17,7 +17,7 @@ print ("start")
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
 USE_WIIMOTE=False
-USE_GAMEPAD=False
+USE_GAMEPAD=True
 DISPLAY_PREVIEW=True
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
@@ -429,13 +429,7 @@ while(RUN_FLAG):
             RUN_FLAG=False
         #~ ev+=1.0/pps
     #prepare next point
-    #current foot position, speed and acceleration
-    [foot_x0  ,foot_y0]  =p0
-    [foot_dx0 ,foot_dy0] =[0.0,0.0]
-    [foot_ddx0,foot_ddy0]=[0.0,0.0]
-
-    p0=[xf, yf]
-
+    p0=current_flying_foot 
     LR = not LR
     ev=0.0
     tk+=durrationOfStep
