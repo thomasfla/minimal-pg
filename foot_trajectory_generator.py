@@ -22,10 +22,23 @@ class Foot_trajectory_generator(object):
         self.x1=0.0
         self.y1=0.0
         
+        
+        #express acceleration as: ddx0 = (coeff_acc_x_lin_a) * x1 + coeff_acc_x_lin_b
+        #                         ddy0 = (coeff_acc_y_lin_a) * x1 + coeff_acc_y_lin_b
+        #Remark : When the trajectory becomes non-adaptative coeff_acc_x_lin_a is = 0.0 and coeff_acc_y_lin_b contains the full information of the acceleration!
+        
+        self.coeff_acc_x_lin_a = 0.0
+        self.coeff_acc_x_lin_b = 0.0
+        
+        self.coeff_acc_y_lin_a = 0.0
+        self.coeff_acc_y_lin_b = 0.0
+        
+        
     def get_next_foot(self, x0, dx0, ddx0, y0, dy0, ddy0, x1, y1, t0 , t1 ,  dt):
         '''how to reach a foot position (here using polynomials profiles)'''
         h=self.h
-        if( (t1 - t0) > self.time_adaptative_disabled ):
+        adaptative_mode = (t1 - t0) > self.time_adaptative_disabled
+        if( adaptative_mode ):
             #compute polynoms coefficients for x and y
             #~ Ax5=(ddx0*t0**2 - 2*ddx0*t0*t1 - 6*dx0*t0 + ddx0*t1**2 + 6*dx0*t1 + 12*x0 - 12*x1)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
             #~ Ax4=(30*t0*x1 - 30*t0*x0 - 30*t1*x0 + 30*t1*x1 - 2*t0**3*ddx0 - 3*t1**3*ddx0 + 14*t0**2*dx0 - 16*t1**2*dx0 + 2*t0*t1*dx0 + 4*t0*t1**2*ddx0 + t0**2*t1*ddx0)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
@@ -108,7 +121,7 @@ class Foot_trajectory_generator(object):
             #~ [Ay5,Ay4,Ay3,Ay2,Ay1,Ay0] = self.lastCoeffs_y
             [cx5,cx4,cx3,cx2,cx1,cx0 , dx5,dx4,dx3,dx2,dx1,dx0 , cy5,cy4,cy3,cy2,cy1,cy0 , dy5,dy4,dy3,dy2,dy1,dy0] = self.lastCoeffs
             
-        #coeficients for z (deterministic)
+        #coefficients for z (deterministic)
         Az6 =         -h/((t1/2)**3*(t1 - t1/2)**3)
         Az5=    (3*t1*h)/((t1/2)**3*(t1 - t1/2)**3)
         Az4=-(3*t1**2*h)/((t1/2)**3*(t1 - t1/2)**3)
@@ -149,8 +162,16 @@ class Foot_trajectory_generator(object):
         #~ ddy1=2*Ay2 + 3*2*Ay3*ev + 4*3*Ay4*ev**2 + 5*4*Ay5*ev**3 
 
         #expression de ddx0 comme une fonction lineaire de x1:
-        #~ ddx1_lin = 
-    
+        if( adaptative_mode ):
+            coeff_acc_x_lin_a =  2*cx2 + 3*2*cx3*ev + 4*3*cx4*ev**2 + 5*4*cx5*ev**3
+            coeff_acc_x_lin_b =  2*dx2 + 3*2*dx3*ev + 4*3*dx4*ev**2 + 5*4*dx5*ev**3
+            coeff_acc_y_lin_a =  2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3
+            coeff_acc_y_lin_b =  2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
+        else:
+            coeff_acc_x_lin_a =  0.0
+            coeff_acc_x_lin_b =  y1 * (2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3) + 2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
+            coeff_acc_y_lin_a =  0.0
+            coeff_acc_y_lin_b =  y1 * (2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3) + 2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
         return [x0,dx0,ddx0  ,  y0,dy0,ddy0  ,  z0,dz0,ddz0 , self.x1,self.y1] 
 
 
