@@ -218,7 +218,7 @@ class PinocchioControllerAcceleration(object):
         dt2=self.dt**2
         dt=self.dt
     #Using Least Squares*********************
-        qddot = npl.pinv(J1)*(Ac1)
+        #~ qddot = npl.pinv(J1)*(Ac1)
     #Using QPoases:**************************
         A=J1
         b=Ac1
@@ -256,8 +256,6 @@ class PinocchioControllerAcceleration(object):
         self.robot.increment(self.q, np.matrix(self.v*self.dt))
         #~ self.robot.display(self.q)
         #~ self.robot.viewer.gui.refresh()
-
-
 
         return self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
         
