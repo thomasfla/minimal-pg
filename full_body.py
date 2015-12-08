@@ -18,17 +18,17 @@ class PinocchioControllerAcceleration(object):
         self.lastJcom = self.robot.Jcom(self.q) #to be del.
         
     def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],ddLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],ddRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.0,.0,.0],LR=True):
-        def robotint(q,dq):
-            M = se3.SE3(se3.Quaternion(q[6,0],q[3,0],q[4,0],q[5,0]).matrix(),q[:3])
-            dM = se3.exp(dq[:6])
-            M = M*dM
-            q[:3] = M.translation
-            q[3:7] = se3.Quaternion(M.rotation).coeffs()
-            q[7:] += dq[6:]
+        #~ def robotint(q,dq):
+            #~ M = se3.SE3(se3.Quaternion(q[6,0],q[3,0],q[4,0],q[5,0]).matrix(),q[:3])
+            #~ dM = se3.exp(dq[:6])
+            #~ M = M*dM
+            #~ q[:3] = M.translation
+            #~ q[3:7] = se3.Quaternion(M.rotation).coeffs()
+            #~ q[7:] += dq[6:]
             
-        def robotdoubleint(q,dq,ddq,dt):
-            dq += dt*ddq
-            robotint(q,dq)
+        #~ def robotdoubleint(q,dq,ddq,dt):
+            #~ dq += dt*ddq
+            #~ robotint(q,dq)
             
         def errorInSE3( M,Mdes):
             '''
@@ -38,14 +38,14 @@ class PinocchioControllerAcceleration(object):
             error = se3.log(Mdes.inverse()*M)
             return error.vector()
             
-        def errorInSE3dyn(M,Mdes,v_frame,v_des):
-            gMl = se3.SE3.Identity()
-            gMl.rotation = M.rotation
-            # Compute error
-            error = errorInSE3(M, Mdes);
-            v_error = v_frame - gMl.actInv(v_des)
-
-            return error,v_error.vector()
+        #~ def errorInSE3dyn(M,Mdes,v_frame,v_des):
+            #~ gMl = se3.SE3.Identity()
+            #~ gMl.rotation = M.rotation
+            #~ # Compute error
+            #~ error = errorInSE3(M, Mdes);
+            #~ v_error = v_frame - gMl.actInv(v_des)
+#~ 
+            #~ return error,v_error.vector()
             
         def errorLinkInSE3dyn(linkId,Mdes,v_des,q,v):
             # Get the current configuration of the link
@@ -222,9 +222,8 @@ class PinocchioControllerAcceleration(object):
     #Using QPoases:**************************
         A=J1
         b=Ac1
-        
         #Equality constrains on com (x and y)
-        lb_Acom = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]    ).T)[0]
+        lb_Acom = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]).T)[0]
         Acom_   = Jcom[:2]
         
         #Equality constrains on flying foot
@@ -246,18 +245,28 @@ class PinocchioControllerAcceleration(object):
         qpb.getPrimalSolution(x_hat2)
         qddot = np.matrix(x_hat2).T
    #*****************************************     
-
-
         #~ Z = null(J1)
 
         #~ qddot += Z*npl.pinv(J2*Z)*(-(1.0 * err2 + 1.0 * v_err2) - J2*qddot) #for tests, just one task
-        self.a = qddot
-        self.v += np.matrix(self.a*self.dt)
-        self.robot.increment(self.q, np.matrix(self.v*self.dt))
+        
+        
+        
+        #~ self.a = qddot
+        #~ self.v += np.matrix(self.a*self.dt)
+        #~ self.robot.increment(self.q, np.matrix(self.v*self.dt))
+        
+        
+        
         #~ self.robot.display(self.q)
         #~ self.robot.viewer.gui.refresh()
 
-        return self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
+        self.A_FB = A
+        self.b_FB = b
+        self.JflyingFoot = JflyingFoot
+        self.Jcom = Jcom
+        self.dJdqCOM = dJdqCOM
+        self.dJdqFlyingFoot = dJdqFlyingFoot
+        return qddot#self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
         
 
 

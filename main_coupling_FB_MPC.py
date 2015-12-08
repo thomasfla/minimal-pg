@@ -6,7 +6,8 @@ from mpc_foot_position import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
 import matplotlib.pyplot as plt
 import numpy as np
-
+from qpoases import PyQProblemB as QProblemB
+from qpoases import PyQProblem as QProblem
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
 from initial_pose_generator import *
@@ -16,10 +17,12 @@ print ("start")
 
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
+
+COUPLING=False
 USE_WIIMOTE=False
-USE_GAMEPAD=False
+USE_GAMEPAD=True
 DISPLAY_PREVIEW=True
-ENABLE_LOGING=True
+ENABLE_LOGING=False
 ROBOT_MODEL="ROMEO" 
 STOP_TIME = 10.0#np.inf
 
@@ -77,9 +80,19 @@ lastFoot=  initial_LF#[0.0102606,0.096]
 [foot_dx0 ,foot_dy0] =[0.0,0.0]
 [foot_ddx0,foot_ddy0]=[0.0,0.0]
 
-current_flying_foot   = [foot_x0  ,foot_y0]
-v_current_flying_foot = [foot_dx0 ,foot_dy0]
+current_flying_foot   = [foot_x0  ,foot_y0  ]
+v_current_flying_foot = [foot_dx0 ,foot_dy0 ]
 a_current_flying_foot = [foot_ddx0,foot_ddy0]
+
+steps=[[0,0],[0,0]]
+#~ steps[0][1] = foot_x0
+#~ steps[1][1] = foot_y0
+p1=p0
+[steps[0][0],steps[1][0]]=cop
+[steps[0][1],steps[1][1]]=p1
+
+
+
 def cost_on_p1(ev,ev_foot_const):
     if ev > ev_foot_const:
         #~ c=1000
@@ -215,9 +228,11 @@ while(RUN_FLAG):
         #************************** M P C ******************************
         #solve MPC for current state x
         '''extract 1st command to apply, cop position and preview position of com'''
-        steps = pg.computeStepsPosition(ev,p0,v,x, LR,p1_star,cost_on_p1(ev,ev_foot_const),False)
+        steps1 = pg.computeStepsPosition(ev,p0,v,x, LR,p1_star,cost_on_p1(ev,ev_foot_const),False)
+        if (not COUPLING):
+            steps=steps1
         cop=[steps[0][0],steps[1][0]]
-        p1=[steps[0][1],steps[1][1]]
+        p1= [steps[0][1],steps[1][1]]
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
         
         #~ w2= pg.g/pg.h
@@ -227,7 +242,7 @@ while(RUN_FLAG):
         dd_c_y = pg.coeff_acc_y_lin_a*cop[1]+pg.coeff_acc_y_lin_b
         
         x_cmd=[[c_x,d_c_x] , [c_y,d_c_y]] #command to apply
-        [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY)
+        #~ [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY)
         if ENABLE_LOGING:
             for i in range(len(tt)):
                 tt[i]+=tk
@@ -289,8 +304,6 @@ while(RUN_FLAG):
             #~ showComPreviewInViewer(robot,[cc_x,cc_y])
     
         [foot_x1,foot_y1]=[steps[0][1],steps[1][1]] #Goal for the flying foot
-        
-        
         foot_x0   =   current_flying_foot[0]
         foot_dx0  = v_current_flying_foot[0]
         foot_ddx0 = a_current_flying_foot[0]
@@ -326,7 +339,7 @@ while(RUN_FLAG):
         t0=time.time()
         
         #******************** F U L L   B O D Y ************************
-        currentCOM,v_currentCOM,err,errDyn = p.controlLfRfCom(left_foot_xyz,
+        qddot = p.controlLfRfCom       (left_foot_xyz,
                                         left_foot_dxdydz,
                                         left_foot_ddxddyddz,
                                         right_foot_xyz,
@@ -337,8 +350,90 @@ while(RUN_FLAG):
                                         [dd_c_x,dd_c_y,0.0],
                                         LR
                                         )
+        #******************** C O U P L I N G  *************************
+
+        if (COUPLING):
+            #get matrix for the full body
+            A_FB = p.A_FB
+            b_FB = p.b_FB
+            A_MPC = pg.A_MPC
+            b_MPC = pg.b_MPC
+            
+            #write as one problem
+            Zeros1=np.zeros([A_MPC.shape[0], A_FB.shape[1]])
+            Zeros2=np.zeros([ A_FB.shape[0], A_MPC.shape[1]])
+            A_coupl =  np.vstack([np.hstack([A_MPC  ,Zeros1]),
+                                  np.hstack([Zeros2 ,A_FB  ])])
+            b_coupl =  np.vstack([b_MPC,
+                                  b_FB])
+            #write as a QP
+            
+        #Using QPoases:**************************
+        
+            pg.coeff_acc_x_lin_a=0.0  #FOR TEST FORCE ACC_COM 
+            pg.coeff_acc_y_lin_a=0.0  #FOR TEST FORCE ACC_COM 
+            pg.coeff_acc_x_lin_b=dd_c_x
+            pg.coeff_acc_y_lin_b=dd_c_y
+            ftg.coeff_acc_x_lin_a=0.0 #FOR TEST FORCE ACC_ff 
+            ftg.coeff_acc_y_lin_a=0.0 #FOR TEST FORCE ACC_ff   
+            ftg.coeff_acc_x_lin_b=ddxf
+            ftg.coeff_acc_y_lin_b=ddyf
+            #Equality constrains on com (x and y)
+            Acom_ = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.Jcom[:2]])
+            Acom_[0,0               ]=pg.coeff_acc_x_lin_a      #p0_x
+            Acom_[1,A_MPC.shape[1]/2]=pg.coeff_acc_y_lin_a      #p0_y
+            lb_Acom        = np.array((  np.matrix([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])-p.dJdqCOM[:2]           ).T)[0]
+            
+            #Equality constrains on flying foot
+            AflyingFoot_   = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.JflyingFoot[:2]])
+            AflyingFoot_[0,1                 ]=ftg.coeff_acc_x_lin_a  #p1_x
+            AflyingFoot_[1,1+A_MPC.shape[1]/2]=ftg.coeff_acc_y_lin_a  #p1_y
+            lb_AflyingFoot = np.array((  np.matrix([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])-p.dJdqFlyingFoot[:2]    ).T)[0]
+            
+
+
+            A_   = np.vstack([Acom_,AflyingFoot_])
+            lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
+            #~ 
+            #~ A_   = Acom_ #FOR TEST ONLY COM
+            #~ lb_A = lb_Acom
+            #~ 
+            #~ A_   = AflyingFoot_ #FOR TEST ONLY FF
+            #~ lb_A = lb_AflyingFoot
+
+            ub_A = lb_A
+
+            H=np.array( A_coupl.T*A_coupl).T
+            g=np.array(-A_coupl.T*b_coupl).T[0]
+           
+            lb=-100000.0*np.ones(A_coupl.shape[1])
+            ub= 100000.0*np.ones(A_coupl.shape[1])
+            #~ qpb = QProblem(A_coupl.shape[1],A_.shape[0])
+            #~ qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([10000]))
+            qpb = QProblemB(A_coupl.shape[1])
+            qpb.init(H,g,lb,ub,np.array([100]))
+                    
+            sol=np.zeros(A_coupl.shape[1])
+            qpb.getPrimalSolution(sol)
+            solution = np.matrix(sol).T
+            qddot = solution[-p.robot.nv:] #qddot
+            pi_x=solution[     :  Nstep].T.tolist()[0]
+            pi_y=solution[Nstep:2*Nstep].T.tolist()[0]
+            steps=[pi_x,pi_y]
+            #~ embed()
+
+
+        #***************A P P L Y I N G   C O N T R O L*****************
+        
+        p.a = qddot
+        p.v += np.matrix(p.a*p.dt)
+        p.robot.increment(p.q, np.matrix(p.v*p.dt))
 
         
+        #************* S T A T E   M E A S U R E M E N T ***************
+        currentCOM =   p.robot.com(p.q)
+        v_currentCOM = p.robot.Jcom(p.q)*p.v
+
         accLf=p.robot.acceleration(p.q,p.v,p.a,p.robot.lf).linear
         accRf=p.robot.acceleration(p.q,p.v,p.a,p.robot.rf).linear
         
@@ -399,7 +494,7 @@ while(RUN_FLAG):
             log_cop_y.append(cop[1])
 
         x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
-
+        
         #add some disturbance on COM measurements
         if sigmaNoisePosition >0:     
             x[0][0]+=np.random.normal(0,sigmaNoisePosition) 
@@ -417,19 +512,16 @@ while(RUN_FLAG):
         disturb_cy=0.0
         disturb_dcx=0.0
         disturb_dcy=0.0
-        
-        #~ vect_f.append (err[1,0])
-        #~ vect_df.append(errDyn[1,0])
+
         simulationTime+=dt
         
         #~ print simulationTime
-        
         #******************** UPDATE DISPLAY ****************************
         if (it%2==0):
             robot.display(p.q)
             robot.viewer.gui.refresh()
             showStepPreviewInViewer(robot,steps)
-            showComPreviewInViewer(robot,[cc_x,cc_y])
+            #~ showComPreviewInViewer(robot,[cc_x,cc_y])
         
         if (simulationTime>STOP_TIME): 
             RUN_FLAG=False
