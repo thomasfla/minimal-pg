@@ -151,6 +151,18 @@ class Foot_trajectory_generator(object):
         dz0 =  3*Az3*ev**2 + 4*Az4*ev**3 +   5*Az5*ev**4 +  6*Az6*ev**5
         ddz0=2*3*Az3*ev+   3*4*Az4*ev**2 + 4*5*Az5*ev**3 +5*6*Az6*ev**4
 
+        #expression de ddx0 comme une fonction lineaire de x1:
+        if( adaptative_mode ):
+            self.coeff_acc_x_lin_a =  2*cx2 + 3*2*cx3*ev + 4*3*cx4*ev**2 + 5*4*cx5*ev**3
+            self.coeff_acc_x_lin_b =  2*dx2 + 3*2*dx3*ev + 4*3*dx4*ev**2 + 5*4*dx5*ev**3
+            self.coeff_acc_y_lin_a =  2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3
+            self.coeff_acc_y_lin_b =  2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
+        else:
+            self.coeff_acc_x_lin_a =  0.0
+            self.coeff_acc_x_lin_b =  x1 * (2*cx2 + 3*2*cx3*ev + 4*3*cx4*ev**2 + 5*4*cx5*ev**3) + 2*dx2 + 3*2*dx3*ev + 4*3*dx4*ev**2 + 5*4*dx5*ev**3
+            self.coeff_acc_y_lin_a =  0.0
+            self.coeff_acc_y_lin_b =  y1 * (2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3) + 2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
+        
         #get the target point (usefull for inform the MPC when we are not adaptative anymore.
         ev=t1
         #~ x1  =Ax0 + Ax1*ev + Ax2*ev**2 + Ax3*ev**3 + Ax4*ev**4 + Ax5*ev**5
@@ -161,17 +173,7 @@ class Foot_trajectory_generator(object):
         #~ dy1 =Ay1 + 2*Ay2*ev + 3*Ay3*ev**2 + 4*Ay4*ev**3 + 5*Ay5*ev**4
         #~ ddy1=2*Ay2 + 3*2*Ay3*ev + 4*3*Ay4*ev**2 + 5*4*Ay5*ev**3 
 
-        #expression de ddx0 comme une fonction lineaire de x1:
-        if( adaptative_mode ):
-            coeff_acc_x_lin_a =  2*cx2 + 3*2*cx3*ev + 4*3*cx4*ev**2 + 5*4*cx5*ev**3
-            coeff_acc_x_lin_b =  2*dx2 + 3*2*dx3*ev + 4*3*dx4*ev**2 + 5*4*dx5*ev**3
-            coeff_acc_y_lin_a =  2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3
-            coeff_acc_y_lin_b =  2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
-        else:
-            coeff_acc_x_lin_a =  0.0
-            coeff_acc_x_lin_b =  y1 * (2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3) + 2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
-            coeff_acc_y_lin_a =  0.0
-            coeff_acc_y_lin_b =  y1 * (2*cy2 + 3*2*cy3*ev + 4*3*cy4*ev**2 + 5*4*cy5*ev**3) + 2*dy2 + 3*2*dy3*ev + 4*3*dy4*ev**2 + 5*4*dy5*ev**3
+
         return [x0,dx0,ddx0  ,  y0,dy0,ddy0  ,  z0,dz0,ddz0 , self.x1,self.y1] 
 
 
