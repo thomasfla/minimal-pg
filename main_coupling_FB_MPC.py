@@ -219,10 +219,13 @@ while(RUN_FLAG):
         cop=[steps[0][0],steps[1][0]]
         p1=[steps[0][1],steps[1][1]]
         [c_x , c_y , d_c_x , d_c_y]     = pg.computeNextCom(cop,x,dt)
-        w2= pg.g/pg.h
-        dd_c_x = w2*( c_x - cop[0] ) #Information given to the FULL BODY
-        dd_c_y = w2*( c_y - cop[1] )
-
+        
+        #~ w2= pg.g/pg.h
+        #~ dd_c_x = w2*( c_x - cop[0] ) #Information given to the FULL BODY
+        #~ dd_c_y = w2*( c_y - cop[1] )
+        dd_c_x = pg.coeff_acc_x_lin_a*cop[0]+pg.coeff_acc_x_lin_b
+        dd_c_y = pg.coeff_acc_y_lin_a*cop[1]+pg.coeff_acc_y_lin_b
+        
         x_cmd=[[c_x,d_c_x] , [c_y,d_c_y]] #command to apply
         [tt, cc_x , cc_y , d_cc_x , d_cc_y] = pg.computePreviewOfCom(steps,ev,x,N=N_COM_TO_DISPLAY)
         if ENABLE_LOGING:
