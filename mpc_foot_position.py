@@ -39,6 +39,17 @@ class PgMini (object):
         self.beta_x          = beta_x  # Gain of step placement heuristic respect (x)
         self.beta_y          = beta_y  # Gain of step placement heuristic respect (y)
         self.gamma           = gamma   # Gain on step cop-p0 cost
+        
+        #***************************************************************
+        #coeffs for the exrpession of acceleration of com as a linear function of p0_x, p0_y (usefull for coupling MPC and FB)
+        #dd_c_x = (coeff_acc_x_lin_a) * p0_x + coeff_acc_x_lin_b
+        #dd_c_y = (coeff_acc_y_lin_a) * p0_y + coeff_acc_y_lin_b
+        #  This coeeficients are computed when computeNextCom(...) is called
+        self.coeff_acc_x_lin_a =0.0
+        self.coeff_acc_x_lin_b =0.0
+        self.coeff_acc_y_lin_a =0.0
+        self.coeff_acc_y_lin_b =0.0
+        #***************************************************************
     def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0,RETURN_MATRIX=False):
         #gamma=20.0
         #gamma2=200.0
@@ -212,6 +223,11 @@ class PgMini (object):
         c_y   =     (c0_y -py) * np.cosh(w*t) + (d_c0_y/w) * np.sinh(w*t)+py
         d_c_y = w*(c0_y -py) * np.sinh(w*t) +     d_c0_y * np.cosh(w*t) 
 
+        #express dd_c as a linear function of p0:
+        self.coeff_acc_x_lin_a = -w2*np.cosh(w*t)
+        self.coeff_acc_x_lin_b = w2*c0_x*np.cosh(w*t)+w*d_c0_x*np.sinh(w*t)
+        self.coeff_acc_y_lin_a = -w2*np.cosh(w*t)
+        self.coeff_acc_y_lin_b = w2*c0_y*np.cosh(w*t)+w*d_c0_y*np.sinh(w*t)
         return [c_x , c_y , d_c_x , d_c_y]
 
 
