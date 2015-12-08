@@ -298,7 +298,12 @@ while(RUN_FLAG):
         
         [xf,dxf,ddxf  ,  yf,dyf,ddyf  ,  zf,dzf,ddzf , p1_star_x , p1_star_y]= ftg.get_next_foot(foot_x0, foot_dx0, foot_ddx0, foot_y0, foot_dy0, foot_ddy0, foot_x1, foot_y1, t , durrationOfStep ,  dt)
         p1_star=[p1_star_x,p1_star_y] #Realistic destination (=Goal if we have time... see "ev_foot_const")
-
+        
+        #express foot acceleration as linear func of x1,y1
+        ddxf=ftg.coeff_acc_x_lin_a * foot_x1 + ftg.coeff_acc_x_lin_b
+        ddyf=ftg.coeff_acc_y_lin_a * foot_y1 + ftg.coeff_acc_y_lin_b
+        
+        
         if LR :
             left_foot_xyz    = [ xf, yf, zf]
             left_foot_dxdydz = [dxf,dyf,dzf]
