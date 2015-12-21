@@ -122,8 +122,8 @@ class PinocchioControllerAcceleration(object):
         Kp_Trunk=K
         Kp_post=K
 
-        Kd_foot= 2*np.sqrt(Kp_foot)
-        Kd_com=  2*np.sqrt(Kp_com )
+        Kd_foot= 2*np.sqrt(Kp_foot )
+        Kd_com=  2*np.sqrt(Kp_com  )
         Kd_Trunk=2*np.sqrt(Kp_Trunk) 
         Kd_post= 2*np.sqrt(Kp_post ) 
 

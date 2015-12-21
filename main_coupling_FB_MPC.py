@@ -372,26 +372,27 @@ while(RUN_FLAG):
         
             pg.coeff_acc_x_lin_a=0.0  #FOR TEST FORCE ACC_COM 
             pg.coeff_acc_y_lin_a=0.0  #FOR TEST FORCE ACC_COM 
-            pg.coeff_acc_x_lin_b=dd_c_x
-            pg.coeff_acc_y_lin_b=dd_c_y
+            pg.coeff_acc_x_lin_b=0.1#dd_c_x
+            pg.coeff_acc_y_lin_b=0.2#dd_c_y
+            
             ftg.coeff_acc_x_lin_a=0.0 #FOR TEST FORCE ACC_ff 
             ftg.coeff_acc_y_lin_a=0.0 #FOR TEST FORCE ACC_ff   
-            ftg.coeff_acc_x_lin_b=ddxf
-            ftg.coeff_acc_y_lin_b=ddyf
+            ftg.coeff_acc_x_lin_b=0.1#ddxf
+            ftg.coeff_acc_y_lin_b=0.2#ddyf
+            
+            
             #Equality constrains on com (x and y)
             Acom_ = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.Jcom[:2]])
             Acom_[0,0               ]=pg.coeff_acc_x_lin_a      #p0_x
             Acom_[1,A_MPC.shape[1]/2]=pg.coeff_acc_y_lin_a      #p0_y
-            lb_Acom        = np.array((  np.matrix([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])-p.dJdqCOM[:2]           ).T)[0]
-            
+            #~ lb_Acom        = np.array((  np.matrix([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])           ).T)[0] #-p.dJdqCOM[:2]
+            lb_Acom        = np.array([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])  
             #Equality constrains on flying foot
             AflyingFoot_   = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.JflyingFoot[:2]])
             AflyingFoot_[0,1                 ]=ftg.coeff_acc_x_lin_a  #p1_x
             AflyingFoot_[1,1+A_MPC.shape[1]/2]=ftg.coeff_acc_y_lin_a  #p1_y
-            lb_AflyingFoot = np.array((  np.matrix([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])-p.dJdqFlyingFoot[:2]    ).T)[0]
-            
-
-
+            #~ lb_AflyingFoot = np.array((  np.matrix([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])    ).T)[0] #-p.dJdqFlyingFoot[:2]
+            lb_AflyingFoot = np.array([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])
             A_   = np.vstack([Acom_,AflyingFoot_])
             lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
             #~ 
@@ -408,11 +409,11 @@ while(RUN_FLAG):
            
             lb=-100000.0*np.ones(A_coupl.shape[1])
             ub= 100000.0*np.ones(A_coupl.shape[1])
-            #~ qpb = QProblem(A_coupl.shape[1],A_.shape[0])
-            #~ qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([10000]))
-            qpb = QProblemB(A_coupl.shape[1])
-            qpb.init(H,g,lb,ub,np.array([100]))
-                    
+            qpb = QProblem(A_coupl.shape[1],A_.shape[0])
+            qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([10000]))
+            #~ qpb = QProblemB(A_coupl.shape[1])
+            #~ qpb.init(H,g,lb,ub,np.array([100]))
+
             sol=np.zeros(A_coupl.shape[1])
             qpb.getPrimalSolution(sol)
             solution = np.matrix(sol).T
@@ -420,7 +421,19 @@ while(RUN_FLAG):
             pi_x=solution[     :  Nstep].T.tolist()[0]
             pi_y=solution[Nstep:2*Nstep].T.tolist()[0]
             steps=[pi_x,pi_y]
-            #~ embed()
+            
+            #test constrains
+            #~ print "*** ACC COM ***"
+            #~ Jcom=robot.Jcom(p.q)
+            #~ print Jcom*qddot
+            #~ 
+            #~ print "*** ACC FF ***"
+            #~ Jff=p.JflyingFoot
+            #~ print Jff*qddot
+
+            
+            
+            embed()
 
 
         #***************A P P L Y I N G   C O N T R O L*****************
