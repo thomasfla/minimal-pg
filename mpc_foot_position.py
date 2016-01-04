@@ -13,7 +13,7 @@ class PgMini (object):
          according to a velocity command  $v$. The feet are supposed to 
          be  simple points. $Dpy$ is an heuristic on coronal plane to 
          prevent steps in line and so collision between Left and Rigth 
-         feet. This sign of this heuristic is toogled at each step to
+         foot. The sign of this heuristic is toogled at each step to
          impose Left steps to be on the left side (-$Dpy$) and right 
          steps to be on the right side (+$Dpy$). The starting side is 
          set with LR boolean flag.
