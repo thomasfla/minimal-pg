@@ -17,11 +17,10 @@ print ("start")
 
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
-
-COUPLING=False
+COUPLING=True
 USE_WIIMOTE=False
 USE_GAMEPAD=True
-DISPLAY_PREVIEW=True
+DISPLAY_PREVIEW=False
 ENABLE_LOGING=False
 ROBOT_MODEL="ROMEO" 
 STOP_TIME = 10.0#np.inf
@@ -370,27 +369,28 @@ while(RUN_FLAG):
             
         #Using QPoases:**************************
         
-            pg.coeff_acc_x_lin_a=0.0  #FOR TEST FORCE ACC_COM 
-            pg.coeff_acc_y_lin_a=0.0  #FOR TEST FORCE ACC_COM 
-            pg.coeff_acc_x_lin_b=0.1#dd_c_x
-            pg.coeff_acc_y_lin_b=0.2#dd_c_y
+            #~ pg.coeff_acc_x_lin_a=0.0  #FOR TEST FORCE ACC_COM 
+            #~ pg.coeff_acc_y_lin_a=0.0  #FOR TEST FORCE ACC_COM 
+            #~ pg.coeff_acc_x_lin_b=0.1#dd_c_x
+            #~ pg.coeff_acc_y_lin_b=0.2#dd_c_y
+            #~ 
+            #~ ftg.coeff_acc_x_lin_a=0.0 #FOR TEST FORCE ACC_ff 
+            #~ ftg.coeff_acc_y_lin_a=0.0 #FOR TEST FORCE ACC_ff   
+            #~ ftg.coeff_acc_x_lin_b=0.1#ddxf
+            #~ ftg.coeff_acc_y_lin_b=0.2#ddyf
             
-            ftg.coeff_acc_x_lin_a=0.0 #FOR TEST FORCE ACC_ff 
-            ftg.coeff_acc_y_lin_a=0.0 #FOR TEST FORCE ACC_ff   
-            ftg.coeff_acc_x_lin_b=0.1#ddxf
-            ftg.coeff_acc_y_lin_b=0.2#ddyf
-            
+           
             
             #Equality constrains on com (x and y)
             Acom_ = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.Jcom[:2]])
-            Acom_[0,0               ]=pg.coeff_acc_x_lin_a      #p0_x
-            Acom_[1,A_MPC.shape[1]/2]=pg.coeff_acc_y_lin_a      #p0_y
+            Acom_[0,0               ]=-pg.coeff_acc_x_lin_a      #p0_x
+            Acom_[1,A_MPC.shape[1]/2]=-pg.coeff_acc_y_lin_a      #p0_y
             #~ lb_Acom        = np.array((  np.matrix([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])           ).T)[0] #-p.dJdqCOM[:2]
             lb_Acom        = np.array([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])  
             #Equality constrains on flying foot
             AflyingFoot_   = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.JflyingFoot[:2]])
-            AflyingFoot_[0,1                 ]=ftg.coeff_acc_x_lin_a  #p1_x
-            AflyingFoot_[1,1+A_MPC.shape[1]/2]=ftg.coeff_acc_y_lin_a  #p1_y
+            AflyingFoot_[0,1                 ]=-ftg.coeff_acc_x_lin_a  #p1_x
+            AflyingFoot_[1,1+A_MPC.shape[1]/2]=-ftg.coeff_acc_y_lin_a  #p1_y
             #~ lb_AflyingFoot = np.array((  np.matrix([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])    ).T)[0] #-p.dJdqFlyingFoot[:2]
             lb_AflyingFoot = np.array([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])
             A_   = np.vstack([Acom_,AflyingFoot_])
@@ -407,10 +407,10 @@ while(RUN_FLAG):
             H=np.array( A_coupl.T*A_coupl).T
             g=np.array(-A_coupl.T*b_coupl).T[0]
            
-            lb=-100000.0*np.ones(A_coupl.shape[1])
-            ub= 100000.0*np.ones(A_coupl.shape[1])
+            lb=-100.0*np.ones(A_coupl.shape[1])
+            ub= 100.0*np.ones(A_coupl.shape[1])
             qpb = QProblem(A_coupl.shape[1],A_.shape[0])
-            qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([10000]))
+            qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([1000]))
             #~ qpb = QProblemB(A_coupl.shape[1])
             #~ qpb.init(H,g,lb,ub,np.array([100]))
 
@@ -422,18 +422,30 @@ while(RUN_FLAG):
             pi_y=solution[Nstep:2*Nstep].T.tolist()[0]
             steps=[pi_x,pi_y]
             
+            
+            
+            
+            #wanted acceletarion
+            print "*** ACC COM WANTED***"
+            print pg.coeff_acc_x_lin_a*steps[0][0]+pg.coeff_acc_x_lin_b
+            print pg.coeff_acc_y_lin_a*steps[1][0]+pg.coeff_acc_y_lin_b
+            
+            print "*** ACC FF WANTED***"
+            print ftg.coeff_acc_x_lin_a * steps[0][1] + ftg.coeff_acc_x_lin_b
+            print ftg.coeff_acc_y_lin_a * steps[1][1] + ftg.coeff_acc_y_lin_b
+            
             #test constrains
-            #~ print "*** ACC COM ***"
-            #~ Jcom=robot.Jcom(p.q)
-            #~ print Jcom*qddot
-            #~ 
-            #~ print "*** ACC FF ***"
-            #~ Jff=p.JflyingFoot
-            #~ print Jff*qddot
+            print "*** ACC COM REAL***"
+            Jcom=robot.Jcom(p.q)
+            print Jcom*qddot
+            
+            print "*** ACC FF REAL***"
+            Jff=p.JflyingFoot
+            print Jff*qddot
 
             
             
-            embed()
+            #~ embed()
 
 
         #***************A P P L Y I N G   C O N T R O L*****************
