@@ -6,8 +6,12 @@ from mpc_foot_position import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
 import matplotlib.pyplot as plt
 import numpy as np
-from qpoases import PyQProblemB as QProblemB
-from qpoases import PyQProblem as QProblem
+#~ from qpoases import PyQProblemB as QProblemB
+from qpoases import PySQProblem as SQProblem
+#~ from qpoases import PyQProblem as QProblem
+from qpoases import PyOptions as Options
+from qpoases import PyPrintLevel as PrintLevel
+
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
 from initial_pose_generator import *
@@ -25,6 +29,9 @@ ROBOT_MODEL="ROMEO"
 STOP_TIME = 2.0#np.inf
 
 #define const
+
+
+QPmaxIt=1000
 Nstep=4 #number of step in preview
 pps=80  #point per step
 g=9.81  #(m.s-2) gravity
@@ -208,8 +215,9 @@ if ENABLE_LOGING:
     
     log_cop_x=[]
     log_cop_y=[]
-    
+
 RUN_FLAG=True
+FIRST_QP=True
 ev=0.0
 tk=0 
 it=0
@@ -289,7 +297,7 @@ while(RUN_FLAG):
                               b_FB])
         #write as a QP
             
-        #Using QPoases:**************************
+        #Using QPoases: **************************
 
         #Equality constrains on com (x and y)
         Acom_ = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.Jcom[:2]])
@@ -311,9 +319,18 @@ while(RUN_FLAG):
            
         lb=-100.0*np.ones(A_coupl.shape[1])
         ub= 100.0*np.ones(A_coupl.shape[1])
-        qpb = QProblem(A_coupl.shape[1],A_.shape[0])
-        qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([1000]))
-        sol=np.zeros(A_coupl.shape[1])
+        
+        if (FIRST_QP==True):
+            options = Options()
+            options.printLevel = PrintLevel.NONE #Does not work... ?
+            #~ qpb = QProblem(A_coupl.shape[1],A_.shape[0])
+            qpb = SQProblem(A_coupl.shape[1],A_.shape[0])
+            qpb.setOptions(options)
+            qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
+            sol=np.zeros(A_coupl.shape[1])
+            FIRST_QP=False
+        else:
+            qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
         qpb.getPrimalSolution(sol)
         solution = np.matrix(sol).T
         qddot = solution[-p.robot.nv:] #qddot
@@ -534,7 +551,7 @@ if USE_WIIMOTE:
     wm.close()
     
 if ENABLE_LOGING:
-    embed()
+    #~ embed()
     #Plot COM and dCOM
     plt.figure(1)
     plt.hold(True)
