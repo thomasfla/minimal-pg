@@ -4,7 +4,7 @@ import pinocchio as se3
 from IPython import embed
 from mpc_foot_position import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt   
 import numpy as np
 #~ from qpoases import PyQProblemB as QProblemB
 from qpoases import PySQProblem as SQProblem
@@ -26,12 +26,12 @@ USE_GAMEPAD=True
 DISPLAY_PREVIEW=False
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
-STOP_TIME = 2.0#np.inf
+STOP_TIME = 5.0#np.inf
 
 #define const
 
 
-QPmaxIt=1000
+QPmaxIt=300
 Nstep=4 #number of step in preview
 pps=80  #point per step
 g=9.81  #(m.s-2) gravity
@@ -215,6 +215,8 @@ if ENABLE_LOGING:
     
     log_cop_x=[]
     log_cop_y=[]
+    
+    log_return_qp=[]
 
 RUN_FLAG=True
 FIRST_QP=True
@@ -303,12 +305,14 @@ while(RUN_FLAG):
         Acom_ = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.Jcom[:2]])
         Acom_[0,0               ]=-pg.coeff_acc_x_lin_a      #p0_x
         Acom_[1,A_MPC.shape[1]/2]=-pg.coeff_acc_y_lin_a      #p0_y
-        lb_Acom        = np.array([ pg.coeff_acc_x_lin_b ,pg.coeff_acc_y_lin_b])  
+        lb_Acom        = np.array([ pg.coeff_acc_x_lin_b -.0*p.dJdqCOM[0,0],
+                                    pg.coeff_acc_y_lin_b -.0*p.dJdqCOM[1,0]  ])  
         #Equality constrains on flying foot
         AflyingFoot_   = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.JflyingFoot[:2]])
         AflyingFoot_[0,1                 ]=-ftg.coeff_acc_x_lin_a  #p1_x
         AflyingFoot_[1,1+A_MPC.shape[1]/2]=-ftg.coeff_acc_y_lin_a  #p1_y
-        lb_AflyingFoot = np.array([ftg.coeff_acc_x_lin_b,ftg.coeff_acc_y_lin_b])
+        lb_AflyingFoot = np.array([ftg.coeff_acc_x_lin_b -.0*p.dJdqFlyingFoot[0,0],
+                                   ftg.coeff_acc_y_lin_b -.0*p.dJdqFlyingFoot[1,0]])
         A_   = np.vstack([Acom_,AflyingFoot_])
         lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
 
@@ -319,19 +323,19 @@ while(RUN_FLAG):
            
         lb=-100.0*np.ones(A_coupl.shape[1])
         ub= 100.0*np.ones(A_coupl.shape[1])
-        
+        return_qp = 0
         if (FIRST_QP==True):
             options = Options()
-            options.printLevel = PrintLevel.NONE #Does not work... ?
-            #~ qpb = QProblem(A_coupl.shape[1],A_.shape[0])
+            options.printLevel = PrintLevel.NONE 
             qpb = SQProblem(A_coupl.shape[1],A_.shape[0])
             qpb.setOptions(options)
             qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
             sol=np.zeros(A_coupl.shape[1])
             FIRST_QP=False
         else:
-            qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
+            return_qp = qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
         qpb.getPrimalSolution(sol)
+        log_return_qp.append(return_qp)
         solution = np.matrix(sol).T
         qddot = solution[-p.robot.nv:] #qddot
         pi_x=solution[     :  Nstep].T.tolist()[0]
@@ -356,8 +360,6 @@ while(RUN_FLAG):
         #~ Jff=p.JflyingFoot
         #~ print Jff*qddot
 
-            
-            
         #~ embed()
 
 
@@ -559,21 +561,25 @@ if ENABLE_LOGING:
     log_tp1.append(simulationTime)
     plt.subplot(2,2,1)
     plt.plot(log_tp1,log_comx_mesure,   '-d',label="COMx measure")
+    plt.plot(log_tp1,[min(log_comx_mesure)+element/max(log_return_qp)*(max(log_comx_mesure)-(min(log_comx_mesure))) for element in log_return_qp])
     #~ plt.plot(log_tp1,log_comx_cmd,      '-d',label="COMx cmd")
     #~ plt.plot(log_t,log_comx_state,     '-.d',label="COMx state")
     plt.legend()
     plt.subplot(2,2,2)
     plt.plot(log_tp1,log_comy_mesure,   '-d',label="COMy measure")
+    plt.plot(log_tp1,[min(log_comy_mesure)+element/max(log_return_qp)*(max(log_comy_mesure)-(min(log_comy_mesure))) for element in log_return_qp])
     #~ plt.plot(log_tp1,log_comy_cmd,      '-d',label="COMy cmd")
     #~ plt.plot(log_t,log_comy_state,     '-.d',label="COMy state")
     plt.legend()
     plt.subplot(2,2,3)
     plt.plot(log_tp1,log_vcomx_mesure,   '-d',label="VCOMx measure")
+    plt.plot(log_tp1,[min(log_vcomx_mesure)+element/max(log_return_qp)*(max(log_vcomx_mesure)-(min(log_vcomx_mesure))) for element in log_return_qp])
     #~ plt.plot(log_tp1,log_vcomx_cmd,      '-d',label="VCOMx cmd")
     #~ plt.plot(log_t,log_vcomx_state,     '-.d',label="VCOMx state")
     plt.legend()
     plt.subplot(2,2,4)
     plt.plot(log_tp1,log_vcomy_mesure,   '-d',label="VCOMy measure")
+    plt.plot(log_tp1,[min(log_vcomy_mesure)+element/max(log_return_qp)*(max(log_vcomy_mesure)-(min(log_vcomy_mesure))) for element in log_return_qp])
     #~ plt.plot(log_tp1,log_vcomy_cmd,      '-d',label="VCOMy cmd")
     #~ plt.plot(log_t,log_vcomy_state,      '-.d',label="VCOMy state")
     plt.legend()

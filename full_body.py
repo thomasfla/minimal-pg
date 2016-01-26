@@ -215,35 +215,35 @@ class PinocchioControllerAcceleration(object):
         J2 = Jpost
     #Hierarchical solve_________________________________________________
 
-        dt2=self.dt**2
-        dt=self.dt
+        #~ dt2=self.dt**2
+        #~ dt=self.dt
     #Using Least Squares*********************
         #~ qddot = npl.pinv(J1)*(Ac1)
     #Using QPoases:**************************
         A=J1
         b=Ac1
         #Equality constrains on com (x and y)
-        lb_Acom = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]).T)[0]
-        Acom_   = Jcom[:2]
+        #~ lb_Acom = np.array((  np.matrix(ddCom).T[:2]-dJdqCOM[:2]).T)[0]
+        #~ Acom_   = Jcom[:2]
         
         #Equality constrains on flying foot
-        lb_AflyingFoot = np.array((  np.matrix(ddFlyingFoot).T[:2]-dJdqFlyingFoot[:2]    ).T)[0]
-        AflyingFoot_   = JflyingFoot[:2]
+        #~ lb_AflyingFoot = np.array((  np.matrix(ddFlyingFoot).T[:2]-dJdqFlyingFoot[:2]    ).T)[0]
+        #~ AflyingFoot_   = JflyingFoot[:2]
+#~ 
+        #~ A_   = np.vstack([Acom_,AflyingFoot_])
+        #~ lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
+        #~ ub_A = lb_A
 
-        A_   = np.vstack([Acom_,AflyingFoot_])
-        lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
-        ub_A = lb_A
-
-        qpb = QProblem(self.robot.nv,A_.shape[0])
-        H=np.array( A.T*A).T
-        g=np.array(-A.T*b).T[0]
-        lb=-500.0*np.ones(self.robot.nv)
-        ub= 500.0*np.ones(self.robot.nv)
-
-        qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([100]))
-        x_hat2=np.zeros(self.robot.nv)
-        qpb.getPrimalSolution(x_hat2)
-        qddot = np.matrix(x_hat2).T
+        #~ qpb = QProblem(self.robot.nv,A_.shape[0])
+        #~ H=np.array( A.T*A).T
+        #~ g=np.array(-A.T*b).T[0]
+        #~ lb=-500.0*np.ones(self.robot.nv)
+        #~ ub= 500.0*np.ones(self.robot.nv)
+#~ 
+        #~ qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([100]))
+        #~ x_hat2=np.zeros(self.robot.nv)
+        #~ qpb.getPrimalSolution(x_hat2)
+        #~ qddot = np.matrix(x_hat2).T
    #*****************************************     
         #~ Z = null(J1)
 
@@ -266,7 +266,7 @@ class PinocchioControllerAcceleration(object):
         self.Jcom = Jcom
         self.dJdqCOM = dJdqCOM
         self.dJdqFlyingFoot = dJdqFlyingFoot
-        return qddot#self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
-        
+        #~ return qddot#self.robot.com(self.q),Jcom*self.v ,errCOM,v_errCOM
+        return 0
 
 
