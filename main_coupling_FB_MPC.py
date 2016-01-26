@@ -217,6 +217,11 @@ if ENABLE_LOGING:
     log_cop_y=[]
     
     log_return_qp=[]
+    
+    log_qddot=[]
+    for n in range(robot.nv):
+        log_qddot.append([])
+
 
 RUN_FLAG=True
 FIRST_QP=True
@@ -332,6 +337,7 @@ while(RUN_FLAG):
             qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
             sol=np.zeros(A_coupl.shape[1])
             FIRST_QP=False
+            print "INITIALISATION OF THE QP"
         else:
             return_qp = qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
         qpb.getPrimalSolution(sol)
@@ -429,8 +435,8 @@ while(RUN_FLAG):
             log_p1_y.append(p1[1])
             log_cop_x.append(cop[0])
             log_cop_y.append(cop[1])
-
-
+            for n in range(robot.nv):
+                log_qddot[n].append(qddot[n].item() )
             #~ for i in range(len(tt)):
                 #~ tt[i]+=tk
             #~ if (it==50):#(it%1==0):
@@ -602,5 +608,10 @@ if ENABLE_LOGING:
     #plt.plot(log_t, log_left_foot_x,label="Left foot x")
     plt.legend()
     
+    plt.figure()
+    for n in range(robot.nv):
+        plt.title("Angular joint acceleration")
+        plt.plot (log_t,log_qddot[n],label="qddot["+str(n)+"]")
+    plt.legend()
     plt.show()
 
