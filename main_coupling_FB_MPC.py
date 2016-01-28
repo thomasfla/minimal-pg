@@ -15,7 +15,7 @@ from qpoases import PyPrintLevel as PrintLevel
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
 from initial_pose_generator import *
-
+from macro_plot import *
 import time
 print ("start")
 
@@ -41,7 +41,7 @@ if   (ROBOT_MODEL == "ROMEO"):
 elif (ROBOT_MODEL == "REEMC"): 
     h=0.80  #(m) Heigth of COM
 fh=0.05 #maximum altitude of foot in flying phases 
-ev_foot_const = 0.6# % when the foot target become constant (0.8)
+ev_foot_const = 0.7# % when the foot target become constant (0.8)
 durrationOfStep=0.8#(s) time of a step
 Dpy=0.20
 beta_x=3.0 #cost on pi-pi+1
@@ -222,7 +222,6 @@ if ENABLE_LOGING:
     for n in range(robot.nv):
         log_qddot.append([])
 
-
 RUN_FLAG=True
 FIRST_QP=True
 ev=0.0
@@ -398,7 +397,6 @@ while(RUN_FLAG):
         current_LF  = [posLf[0,0],posLf[1,0]] #position. x,y
         current_RF  = [posRf[0,0],posRf[1,0]] #position. x,y
 
-        
         if (not LR):
             current_flying_foot  = current_RF
             v_current_flying_foot  = v_current_RF
@@ -460,12 +458,8 @@ while(RUN_FLAG):
             #~ log_vcomx_state.append(    x[0][1])
             #~ log_vcomx_cmd.append  (x_cmd[0][1])
             #~ log_vcomy_state.append(    x[1][1])
-            #~ log_vcomy_cmd.append  (x_cmd[1][1])       
+            #~ log_vcomy_cmd.append  (x_cmd[1][1])
             
-
-
-
-
 
         x = [[currentCOM[0,0],v_currentCOM[0,0]],[currentCOM[1,0] ,v_currentCOM[1,0]]] # PREVIEW IS CLOSE LOOP
         
@@ -521,7 +515,7 @@ while(RUN_FLAG):
                 v[1]=1.0
 
         #******************** UPDATE DISPLAY ****************************
-        if (it%2==0):
+        if (it%1==0):
             robot.display(p.q)
             robot.viewer.gui.refresh()
             showStepPreviewInViewer(robot,steps)
@@ -565,41 +559,38 @@ if ENABLE_LOGING:
     plt.hold(True)
     log_tp1=log_t[1:] #log_tp1 is the timing vector from 1*dt to the end
     log_tp1.append(simulationTime)
+    
     plt.subplot(2,2,1)
     plt.plot(log_tp1,log_comx_mesure,   '-d',label="COMx measure")
     plt.plot(log_tp1,[min(log_comx_mesure)+element/max(log_return_qp)*(max(log_comx_mesure)-(min(log_comx_mesure))) for element in log_return_qp])
-    #~ plt.plot(log_tp1,log_comx_cmd,      '-d',label="COMx cmd")
-    #~ plt.plot(log_t,log_comx_state,     '-.d',label="COMx state")
+    colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
+    
     plt.subplot(2,2,2)
     plt.plot(log_tp1,log_comy_mesure,   '-d',label="COMy measure")
     plt.plot(log_tp1,[min(log_comy_mesure)+element/max(log_return_qp)*(max(log_comy_mesure)-(min(log_comy_mesure))) for element in log_return_qp])
-    #~ plt.plot(log_tp1,log_comy_cmd,      '-d',label="COMy cmd")
-    #~ plt.plot(log_t,log_comy_state,     '-.d',label="COMy state")
+    colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
+
     plt.subplot(2,2,3)
     plt.plot(log_tp1,log_vcomx_mesure,   '-d',label="VCOMx measure")
     plt.plot(log_tp1,[min(log_vcomx_mesure)+element/max(log_return_qp)*(max(log_vcomx_mesure)-(min(log_vcomx_mesure))) for element in log_return_qp])
-    #~ plt.plot(log_tp1,log_vcomx_cmd,      '-d',label="VCOMx cmd")
-    #~ plt.plot(log_t,log_vcomx_state,     '-.d',label="VCOMx state")
+    colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
+
     plt.subplot(2,2,4)
     plt.plot(log_tp1,log_vcomy_mesure,   '-d',label="VCOMy measure")
     plt.plot(log_tp1,[min(log_vcomy_mesure)+element/max(log_return_qp)*(max(log_vcomy_mesure)-(min(log_vcomy_mesure))) for element in log_return_qp])
-    #~ plt.plot(log_tp1,log_vcomy_cmd,      '-d',label="VCOMy cmd")
-    #~ plt.plot(log_t,log_vcomy_state,      '-.d',label="VCOMy state")
+    colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
 
     #plot feet trajectories
     plt.figure()
-    #~ plt.plot(log_t,log_right_foot_x,label="Right foot x")
-    #~ plt.plot(log_t, log_left_foot_x,label="Left foot x")
+    colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     
     plt.plot(log_t,log_right_foot_x_mesure,label="Right foot x measure")
     plt.plot(log_t, log_left_foot_x_mesure,label="Left foot x measure")
     
-    plt.legend()
-    plt.figure()
     plt.plot(log_t,log_p0_x,label="p0 x")
     plt.plot(log_t,log_p1_star_x,label="p1* x")
     plt.plot(log_t,log_p1_x,label="p1 x")
@@ -609,6 +600,7 @@ if ENABLE_LOGING:
     plt.legend()
     
     plt.figure()
+    colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     for n in range(robot.nv):
         plt.title("Angular joint acceleration")
         plt.plot (log_t,log_qddot[n],label="qddot["+str(n)+"]")
