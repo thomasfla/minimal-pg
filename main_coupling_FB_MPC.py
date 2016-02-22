@@ -14,6 +14,7 @@ from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
 from initial_pose_generator import *
 from macro_plot import *
+from least_square_equality_constrained import *
 import time
 print ("start")
 
@@ -24,7 +25,7 @@ USE_GAMEPAD=True
 DISPLAY_PREVIEW=False
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
-STOP_TIME = 10.0#np.inf
+STOP_TIME = 50#np.inf
 
 #define const
 
@@ -37,15 +38,15 @@ if   (ROBOT_MODEL == "ROMEO"):
     h=0.63  #(m) Heigth of COM
 elif (ROBOT_MODEL == "REEMC"): 
     h=0.80  #(m) Heigth of COM
-fh=0.0 #maximum altitude of foot in flying phases 
+fh=0.05 #maximum altitude of foot in flying phases 
 ev_foot_const = 0.7# % when the foot target become constant (0.8)
 durrationOfStep=0.8#(s) time of a step
 Dpy=0.20
 beta_x=3.0 #cost on pi-pi+1
 beta_y=8.0
 gamma=3.0
-final_cost_on_p1=gamma*500.0
-sigmaNoisePosition=0.00 #optional noise on COM measurement
+final_cost_on_p1=gamma 
+sigmaNoisePosition=0.01 #optional noise on COM measurement
 sigmaNoiseVelocity=0.00
 #initialisation of the pg
 
@@ -95,8 +96,6 @@ p1=p0
 
 def cost_on_p1(ev,ev_foot_const):
     if ev > ev_foot_const:
-        #~ c=1000
-        #c= 1/(1-ev+0.0001) - 1/(1-ev_foot_const+0.0001)
         A=final_cost_on_p1 #gain final
         a=A/(ev-ev_foot_const)
         b=A-a
@@ -235,6 +234,7 @@ while(RUN_FLAG):
     for ev in np.linspace(0,1-(1.0/pps),pps):
         it+=1
         t=durrationOfStep*ev
+        cpu_time = time.time()
         #************************** M P C ******************************
         # Compute matrix for MPC part of the problem
         current_cost_on_p1=cost_on_p1(ev,ev_foot_const)
@@ -309,20 +309,20 @@ while(RUN_FLAG):
                               b_FB])
         #write as a QP
             
-        #Using QPoases: **************************
+        
 
         #Equality constrains on com (x and y)
         Acom_ = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.Jcom[:2]])
         Acom_[0,0               ]=-pg.coeff_acc_x_lin_a      #p0_x
         Acom_[1,A_MPC.shape[1]/2]=-pg.coeff_acc_y_lin_a      #p0_y
-        lb_Acom        = np.array([ pg.coeff_acc_x_lin_b -.0*p.dJdqCOM[0,0],
-                                    pg.coeff_acc_y_lin_b -.0*p.dJdqCOM[1,0]  ])  
+        lb_Acom        = np.array([ pg.coeff_acc_x_lin_b -1.0*p.dJdqCOM[0,0],
+                                    pg.coeff_acc_y_lin_b -1.0*p.dJdqCOM[1,0]  ])
         #Equality constrains on flying foot
         AflyingFoot_   = np.hstack([np.zeros([2,A_MPC.shape[1]]),p.JflyingFoot[:2]])
         AflyingFoot_[0,1                 ]=-ftg.coeff_acc_x_lin_a  #p1_x
         AflyingFoot_[1,1+A_MPC.shape[1]/2]=-ftg.coeff_acc_y_lin_a  #p1_y
-        lb_AflyingFoot = np.array([ftg.coeff_acc_x_lin_b -.0*p.dJdqFlyingFoot[0,0],
-                                   ftg.coeff_acc_y_lin_b -.0*p.dJdqFlyingFoot[1,0]])
+        lb_AflyingFoot = np.array([ftg.coeff_acc_x_lin_b -1.0*p.dJdqFlyingFoot[0,0],
+                                   ftg.coeff_acc_y_lin_b -1.0*p.dJdqFlyingFoot[1,0]])
         A_   = np.vstack([Acom_,AflyingFoot_])
         lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
 
@@ -333,21 +333,36 @@ while(RUN_FLAG):
            
         lb=-100.0*np.ones(A_coupl.shape[1])
         ub= 100.0*np.ones(A_coupl.shape[1])
-        return_qp = 0
-        if (FIRST_QP==True):
-            options = Options()
-            options.printLevel = PrintLevel.NONE 
-            qpb = SQProblem(A_coupl.shape[1],A_.shape[0])
-            qpb.setOptions(options)
-            qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
-            sol=np.zeros(A_coupl.shape[1])
-            FIRST_QP=False
-            print "INITIALISATION OF THE QP"
-        else:
-            return_qp = qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
-        qpb.getPrimalSolution(sol)
-        log_return_qp.append(return_qp)
-        solution = np.matrix(sol).T
+        
+        
+        
+        
+        #Using QPoases: **************************
+        #~ return_qp = 0
+        #~ if (FIRST_QP==True):
+            #~ options = Options()
+            #~ options.printLevel = PrintLevel.NONE 
+            #~ qpb = SQProblem(A_coupl.shape[1],A_.shape[0])
+            #~ qpb.setOptions(options)
+            #~ qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
+            #~ sol=np.zeros(A_coupl.shape[1])
+            #~ FIRST_QP=False
+            #~ print "INITIALISATION OF THE QP"
+        #~ else:
+            #~ return_qp = qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
+        #~ qpb.getPrimalSolution(sol)
+
+        #~ log_return_qp.append(return_qp)
+        #~ solution = np.matrix(sol).T
+        
+        #Using least square equality constrained : *********************
+        solution = LSEC(A_coupl,b_coupl,A_,np.matrix(lb_A).T)
+        
+        
+        
+        
+        
+        
         qddot = solution[-p.robot.nv:] #qddot
         pi_x=solution[     :  Nstep].T.tolist()[0]
         pi_y=solution[Nstep:2*Nstep].T.tolist()[0]
@@ -529,8 +544,8 @@ while(RUN_FLAG):
             if currentCOM[1]<-1.0:
                 v[1]=1.0
 
-        #******************** UPDATE DISPLAY ****************************
-        if (it%1==0):
+        #******************** UPDATE DISPLAY ***************************
+        if (it%5==0):
             robot.display(p.q)
             robot.viewer.gui.refresh()
             showStepPreviewInViewer(robot,steps)
@@ -539,6 +554,8 @@ while(RUN_FLAG):
         if (simulationTime>STOP_TIME): 
             RUN_FLAG=False
         #~ ev+=1.0/pps
+        if ( time.time()-cpu_time > dt):
+            print "not in realtime"
     #prepare next point
     p0=current_flying_foot 
     LR = not LR
@@ -561,8 +578,8 @@ while(RUN_FLAG):
         a_current_support_foot = a_current_RF
     ev=0.0
     tk+=durrationOfStep
-    
-    
+
+
     
 if USE_WIIMOTE:
     wm.close()
@@ -577,25 +594,25 @@ if ENABLE_LOGING:
     
     plt.subplot(2,2,1)
     plt.plot(log_t,log_comx_measure,   '-d',label="COMx measure")
-    plt.plot(log_t,[min(log_comx_measure)+element/max(log_return_qp)*(max(log_comx_measure)-(min(log_comx_measure))) for element in log_return_qp])
+    #~ plt.plot(log_t,[min(log_comx_measure)+element/max(log_return_qp)*(max(log_comx_measure)-(min(log_comx_measure))) for element in log_return_qp])
     colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
     
     plt.subplot(2,2,2)
     plt.plot(log_t,log_comy_measure,   '-d',label="COMy measure")
-    plt.plot(log_t,[min(log_comy_measure)+element/max(log_return_qp)*(max(log_comy_measure)-(min(log_comy_measure))) for element in log_return_qp])
+    #~ plt.plot(log_t,[min(log_comy_measure)+element/max(log_return_qp)*(max(log_comy_measure)-(min(log_comy_measure))) for element in log_return_qp])
     colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
 
     plt.subplot(2,2,3)
     plt.plot(log_t,log_vcomx_measure,   '-d',label="VCOMx measure")
-    plt.plot(log_t,[min(log_vcomx_measure)+element/max(log_return_qp)*(max(log_vcomx_measure)-(min(log_vcomx_measure))) for element in log_return_qp])
+    #~ plt.plot(log_t,[min(log_vcomx_measure)+element/max(log_return_qp)*(max(log_vcomx_measure)-(min(log_vcomx_measure))) for element in log_return_qp])
     colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
 
     plt.subplot(2,2,4)
     plt.plot(log_t,log_vcomy_measure,   '-d',label="VCOMy measure")
-    plt.plot(log_t,[min(log_vcomy_measure)+element/max(log_return_qp)*(max(log_vcomy_measure)-(min(log_vcomy_measure))) for element in log_return_qp])
+    #~ plt.plot(log_t,[min(log_vcomy_measure)+element/max(log_return_qp)*(max(log_vcomy_measure)-(min(log_vcomy_measure))) for element in log_return_qp])
     colorize_phases(STOP_TIME,durrationOfStep,ev_foot_const)
     plt.legend()
 
@@ -609,7 +626,6 @@ if ENABLE_LOGING:
     plt.plot(log_t,log_p0_x,     label="p0 x")
     plt.plot(log_t,log_p1_star_x,label="p1* x")
     plt.plot(log_t,log_p1_x,     label="p1 x")
-    embed()
     plt.plot(log_t,log_cop_x,label="cop x")
     #plt.plot(log_t, log_left_foot_x,label="Left foot x")
     plt.legend()
