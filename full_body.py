@@ -114,7 +114,6 @@ class PinocchioControllerAcceleration(object):
         v_errTrunk=v_errTrunk[3:6]
         dJdqTrunk=dJdqTrunk[3:6]
 
-
     #_TASK1 STACK_______________________________________________________
         K=1000.0
         Kp_foot=K
@@ -131,7 +130,7 @@ class PinocchioControllerAcceleration(object):
         errPost =   Kp_post*(self.q-self.robot.q0)[7:]
         v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
         #for test, posture is included in 1st task
-        eps=1e-5 #importance of posture cost
+        eps=1e-3 #importance of posture cost
 
         #~ J1 =    np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk])
         J1 = np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
