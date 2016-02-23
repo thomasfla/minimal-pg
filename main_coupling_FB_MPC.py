@@ -25,13 +25,13 @@ USE_GAMEPAD=True
 DISPLAY_PREVIEW=False
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
-STOP_TIME = 50#np.inf
+STOP_TIME = np.inf
 
 #define const
 
 QPmaxIt=300
 Nstep=4 #number of step in preview
-pps=80  #point per step
+pps=300  #point per step
 g=9.81  #(m.s-2) gravity
 
 if   (ROBOT_MODEL == "ROMEO"):
@@ -46,7 +46,7 @@ beta_x=3.0 #cost on pi-pi+1
 beta_y=8.0
 gamma=3.0
 final_cost_on_p1=gamma 
-sigmaNoisePosition=0.01 #optional noise on COM measurement
+sigmaNoisePosition=0.00 #optional noise on COM measurement
 sigmaNoiseVelocity=0.00
 #initialisation of the pg
 
@@ -238,7 +238,7 @@ while(RUN_FLAG):
         #************************** M P C ******************************
         # Compute matrix for MPC part of the problem
         current_cost_on_p1=cost_on_p1(ev,ev_foot_const)
-        pg.computeStepsPosition(ev,p0,v,x, LR,p1_star,current_cost_on_p1,False)
+        pg.computeStepsPosition(ev,p0,v,x, LR,p1_star,current_cost_on_p1)
         cop=[steps[0][0],steps[1][0]]
         pg.computeNextCom(cop,x,dt)
 
@@ -554,6 +554,7 @@ while(RUN_FLAG):
         if (simulationTime>STOP_TIME): 
             RUN_FLAG=False
         #~ ev+=1.0/pps
+        print (time.time()-cpu_time )*1000.0
         if ( time.time()-cpu_time > dt):
             print "not in realtime"
     #prepare next point

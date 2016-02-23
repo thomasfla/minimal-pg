@@ -50,10 +50,7 @@ class PgMini (object):
         self.coeff_acc_y_lin_a =0.0
         self.coeff_acc_y_lin_b =0.0
         #***************************************************************
-    def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0,RETURN_MATRIX=False):
-        #gamma=20.0
-        #gamma2=200.0
-        
+    def computeStepsPosition(self,alpha=0.0,p0=[-0.001,-0.005],v=[1.0,0.1],x0=[[0,0] , [0,0]],LR=True,p1=[0.0,0.0],gamma2=0.0):
         #const definitions
         g               = self.g     
         h               = self.h
@@ -71,8 +68,6 @@ class PgMini (object):
         
         p1_x=p1[0]
         p1_y=p1[1]
-        
-        
         
         vx= v[0] # speed command
         vy= v[1] # speed command
@@ -148,20 +143,17 @@ class PgMini (object):
         b_p_x=np.vstack([b_p1_x,b_p2_x,b_p3_x,b_p4_x])
         b_p_y=np.vstack([b_p1_y,b_p2_y,b_p3_y,b_p4_y])
         
-        
+
         #create general matrix : combo of x and y problems:
         #[[A_p_x,  0  ]
         #,[  0  ,A_p_y]]
         self.A_MPC=np.vstack([np.hstack([A_p_x                ,np.zeros(A_p_x.shape)]),
                               np.hstack([np.zeros(A_p_y.shape),A_p_y                ])])
         self.b_MPC=np.vstack([b_p_x,b_p_y])
-        if (RETURN_MATRIX==False):
-            #SOLVE QP: ________________________________________________________
-            p_vect_x=(np.dot(np.linalg.pinv(A_p_x),b_p_x)).T
-            p_vect_y=(np.dot(np.linalg.pinv(A_p_y),b_p_y)).T 
-            return [p_vect_x.tolist()[0] , p_vect_y.tolist()[0]]
-        else:
-            return [self.A_MPC,self.b_MPC] 
+        #~ np.set_printoptions(linewidth=100)
+
+
+        return 0
     def computePreviewOfCom(self,steps,alpha=0.0,x0=[[0,0] , [0,0]],N=20):
         '''prepare preview of the com from steps position'''
         w2= self.g/self.h
