@@ -85,6 +85,10 @@ class PinocchioControllerAcceleration(object):
         v_errTrunk=v_errTrunk[3:6]
         dJdqTrunk=dJdqTrunk[3:6]
 
+        #_Post_____________________________________________________________
+        errPost =   (self.q-self.robot.q0)[7:]
+        v_errPost = (self.v-self.robot.v0)[6:]
+
         K=1000.0
         Kp_foot=K
         Kp_com=K
@@ -97,8 +101,7 @@ class PinocchioControllerAcceleration(object):
         Kd_post= 2*np.sqrt(Kp_post ) 
 
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
-        errPost =   Kp_post*(self.q-self.robot.q0)[7:]
-        v_errPost = Kd_post*(self.v-self.robot.v0)[6:]
+
         #for test, posture is included in 1st task
         eps=1e-3 #importance of posture cost
 
@@ -133,7 +136,7 @@ class PinocchioControllerAcceleration(object):
                           ,-Kp_Trunk*errTrunk          - Kd_Trunk*v_errTrunk          - dJdqTrunk
                           ,-Kp_foot*errflyingFoot[2:]  - Kd_foot *v_errflyingFoot[2:] - dJdqFlyingFoot[2:]
                           ,-Kp_foot*errSupportFoot     - Kd_foot *v_errSupportFoot    - dJdqSupportFoot
-                          ,eps*(-errPost  - v_errPost )             ])
+                          ,eps*(-Kp_post*errPost  - Kd_post*v_errPost )             ])
 
 
         self.A_FB = J1
