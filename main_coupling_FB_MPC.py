@@ -6,9 +6,7 @@ from mpc_foot_position import PgMini
 from foot_trajectory_generator import Foot_trajectory_generator
 import matplotlib.pyplot as plt   
 import numpy as np
-from qpoases import PySQProblem as SQProblem
-from qpoases import PyOptions as Options
-from qpoases import PyPrintLevel as PrintLevel
+
 
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
@@ -26,12 +24,19 @@ DISPLAY_PREVIEW=False
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
 STOP_TIME = np.inf
+USE_QPOASES =False
 
+
+
+if USE_QPOASES:
+    from qpoases import PySQProblem as SQProblem
+    from qpoases import PyOptions as Options
+    from qpoases import PyPrintLevel as PrintLevel
 #define const
 
 QPmaxIt=300
 Nstep=4 #number of step in preview
-pps=300  #point per step
+pps=150  #point per step
 g=9.81  #(m.s-2) gravity
 
 if   (ROBOT_MODEL == "ROMEO"):
@@ -40,10 +45,10 @@ elif (ROBOT_MODEL == "REEMC"):
     h=0.80  #(m) Heigth of COM
 fh=0.05 #maximum altitude of foot in flying phases 
 ev_foot_const = 0.7# % when the foot target become constant (0.8)
-durrationOfStep=0.8#(s) time of a step
+durrationOfStep=0.5#(s) time of a step
 Dpy=0.20
 beta_x=3.0 #cost on pi-pi+1
-beta_y=8.0
+beta_y=6.0
 gamma=3.0
 final_cost_on_p1=gamma 
 sigmaNoisePosition=0.00 #optional noise on COM measurement
@@ -56,6 +61,8 @@ print( "dt= "+str(dt*1000)+"ms")
 #load robot model
 if   (ROBOT_MODEL == "ROMEO"):
     robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
+    #~ robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo_heavy_hand.urdf") #TO BE DEL
+
 elif (ROBOT_MODEL == "REEMC"): 
     robot = ReemcWrapper("/home/tflayols/devel-src/reemc_wrapper/reemc/reemc.urdf")
 robot.initDisplay()
@@ -326,37 +333,39 @@ while(RUN_FLAG):
         A_   = np.vstack([Acom_,AflyingFoot_])
         lb_A = np.hstack([lb_Acom,lb_AflyingFoot])
 
-        ub_A = lb_A
 
-        H=np.array( A_coupl.T*A_coupl).T
-        g=np.array(-A_coupl.T*b_coupl).T[0]
-           
-        lb=-100.0*np.ones(A_coupl.shape[1])
-        ub= 100.0*np.ones(A_coupl.shape[1])
         
         
         
-        
-        #Using QPoases: **************************
-        #~ return_qp = 0
-        #~ if (FIRST_QP==True):
-            #~ options = Options()
-            #~ options.printLevel = PrintLevel.NONE 
-            #~ qpb = SQProblem(A_coupl.shape[1],A_.shape[0])
-            #~ qpb.setOptions(options)
-            #~ qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
-            #~ sol=np.zeros(A_coupl.shape[1])
-            #~ FIRST_QP=False
-            #~ print "INITIALISATION OF THE QP"
-        #~ else:
-            #~ return_qp = qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
-        #~ qpb.getPrimalSolution(sol)
+        if USE_QPOASES:
+            #Using QPoases: **************************
+            ub_A = lb_A
 
-        #~ log_return_qp.append(return_qp)
-        #~ solution = np.matrix(sol).T
-        
-        #Using least square equality constrained : *********************
-        solution = LSEC(A_coupl,b_coupl,A_,np.matrix(lb_A).T)
+            H=np.array( A_coupl.T*A_coupl).T
+            g=np.array(-A_coupl.T*b_coupl).T[0]
+
+            lb=-100.0*np.ones(A_coupl.shape[1])
+            ub= 100.0*np.ones(A_coupl.shape[1])
+            return_qp = 0
+            if (FIRST_QP==True):
+                options = Options()
+                options.printLevel = PrintLevel.NONE 
+                qpb = SQProblem(A_coupl.shape[1],A_.shape[0])
+                qpb.setOptions(options)
+                qpb.init(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
+                sol=np.zeros(A_coupl.shape[1])
+                FIRST_QP=False
+                print "INITIALISATION OF THE QP"
+            else:
+                return_qp = qpb.hotstart(H,g,A_,lb,ub,lb_A,ub_A,np.array([QPmaxIt]))
+            qpb.getPrimalSolution(sol)
+
+            log_return_qp.append(return_qp)
+            solution = np.matrix(sol).T
+
+        else:
+            #Using least square equality constrained : *********************
+            solution = LSEC(A_coupl,b_coupl,A_,np.matrix(lb_A).T)
         
         
         
@@ -525,7 +534,8 @@ while(RUN_FLAG):
             v[0]=-my_joystick.get_axis(1)
             v[1]=-my_joystick.get_axis(0)
             if my_joystick.get_button(0) == 1 :
-                RUN_FLAG = False
+                #RUN_FLAG = False
+                STOP_TIME = simulationTime
             if my_joystick.get_button(4) == 1 :
                 print "perturbation on : Cx - Cy !"  
                 disturb_cx=-my_joystick.get_axis(4)/10.0
