@@ -1,0 +1,132 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{comment}
+\usepackage{commath}
+\begin{document}
+\title{Pattern generator \\coupling analytic footprint MPC formulation and whole body control}
+\author{Thomas Flayols}
+\maketitle
+\section*{MPC part}
+
+
+\begin{equation}\label{min_velocity}
+    \begin{pmatrix} 
+         F_u(t)        		& 0 	 		& 0 &0& \hdots & 0 \\
+         {F_x}^1 F_u(t) 		& F_u 	 		& 0 &0& \hdots & 0 \\
+         {F_x}^2 F_u(t) 		& {F_x}^1 F_u 	& F_u &0& \hdots & 0 \\ \\
+         \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ \\
+         {F_x}^{N_s-1} F_u(t) 	&  {F_x}^{N_s-2}	& \hdots& {F_x}^2 F_u& {F_x}^1 F_u  & F_u \\
+    \end{pmatrix}\begin{pmatrix} 
+        p_0 \\
+        \vdots \\
+        p_{N_s}
+    \end{pmatrix} - \begin{pmatrix} 
+        \dot{c}^*-F_x(t) c_0\\
+        \dot{c}^*-F_x(t){F_x}^1 c_0\\
+        \vdots \\
+        \dot{c}^*-F_x(t){F_x}^{N_s-1} c_0\\
+    \end{pmatrix}
+\end{equation}
+
+
+\begin{equation}\label{min_step_dist}
+	\begin{pmatrix} 
+         \beta    & -\beta 	 	& 0 &0& \hdots & 0 \\
+         0&\beta    & -\beta 	 	& 0 & \hdots & 0 \\
+         \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ 
+         0       		&  	 		&    \hdots&  & \beta    & -\beta \\
+	\end{pmatrix}
+	\begin{pmatrix} 
+        p_0 \\
+        \vdots \\
+        p_{N_s}
+	\end{pmatrix}- \begin{pmatrix} 
+        \beta \Delta\\
+        \beta (-1)\Delta\\
+        \vdots \\
+        \beta(-1)^{N_s-1}\Delta\\
+	\end{pmatrix}
+\end{equation}
+
+
+
+
+
+\begin{equation}\label{p0_p1}
+	\begin{pmatrix} 
+         \Gamma    & 0 	 	& 0 &0& \hdots & 0 \\
+         0&\Gamma_2    & 0	 	& 0 & \hdots & 0 \\
+        \end{pmatrix}
+	\begin{pmatrix} 
+        p_0 \\
+        \vdots \\
+        p_{N_s}
+	\end{pmatrix}- \begin{pmatrix} 
+        \Gamma     {p_{0}}^*\\
+         \Gamma_2  {p_{1}}^*\\
+	\end{pmatrix}
+\end{equation}
+
+\section*{FullBody part}
+\begin{equation}\label{FullBody}
+    \begin{pmatrix} 
+         [J_{com}]_z\\
+         [J_{torso}]_{rx,ry,rz}\\
+         [J_{flyingFoot}]_{z,r_x,r_y,r_z}\\
+          J_{supportFoot} \\
+          J_{Posture} \\
+    \end{pmatrix}
+    \bold{\ddot{q}}-
+        \begin{pmatrix} 
+         [-{K_p} \varepsilon_{com}        - {K_d}\dot{\varepsilon}_{com}        - \dot{J}_{com} \dot{q}]_z\\
+         [-{K_p} \varepsilon_{torso}      - {K_d}\dot{\varepsilon}_{torso}      - \dot{J}_{torso} \dot{q}]_{r_x,r_y,r_z} \\
+         [-{K_p} \varepsilon_{flyingFoot} - {K_d}\dot{\varepsilon}_{flyingFoot}  -\dot{J}_{flyingFoot} \dot{q}]_{z,r_x,r_y,r_z}\\
+         -{K_p} \varepsilon_{supportFoot} - {K_d}\dot{\varepsilon}_{supportFoot} -\dot{J}_{supportFoot} \dot{q}\\
+         {\delta}[-{K_p} \varepsilon_{Posture} - {K_d}\dot{\varepsilon}_{Posture}] \\
+        \end{pmatrix}
+\end{equation}
+
+\section*{Coupling contrains}
+The center of mass acceleration in x and y is a linear function of p0 (aka zmp) thanks to the LIP model
+\begin{equation}
+	[{J}_{com} \ddot{q}+\dot{J}_{com} \dot{q}]_{x,y}=[a_{com}p_0+b_{com}]_{x,y}
+\end{equation}
+The flying foot acceleration in x and y is a linear function of p1 (the landing placement of the flying foot) thanks to the polynomial foot trajectory
+\begin{equation}
+	[{J}_{flyingFoot} \ddot{q}+\dot{J}_{flyingFoot} \dot{q}]_{x,y}=[a_{flyingFoot}p_0+b_{flyingFoot}]_{x,y}
+\end{equation}
+\section*{Full problem}
+\begin{equation*}
+\begin{aligned}
+& \underset{\bold{p},\bold{\ddot{q}}}{\text{minimize}}
+& & \norm{
+	\begin{pmatrix} 
+         \bold{A_{MPC x}}     & 0 	 & 0\\
+         0         & \bold{A_{MPC y}} & 0 \\
+         0         & 0 &  \bold{A_{WholeBody}}
+        \end{pmatrix}
+	\begin{pmatrix} 
+        \bold{p_{x0}} \\
+        \bold{p_{y0}} \\
+        \bold{\ddot{q}
+        }
+	\end{pmatrix}
+	- \begin{pmatrix} 
+        \bold{b_{MPC x}}\\
+        \bold{b_{MPC y}}\\
+        \bold{b_{WholeBody}}
+	\end{pmatrix}	
+}_2 \\
+& \text{subject to}
+& & {\bold{A}_{constrains}\begin{pmatrix} 
+        \bold{p} \\
+        \bold{\ddot{q}}
+	\end{pmatrix}- \bold{b}_{constrains}} 	
+\end{aligned}
+\end{equation*}
+
+
+\end{document}
