@@ -11,122 +11,134 @@
 \maketitle
 \section*{MPC part}
 
-
-\begin{equation}\label{min_velocity}
-    \begin{pmatrix} 
-         F_u(t)        		& 0 	 		& 0 &0& \hdots & 0 \\
-         {F_x}^1 F_u(t) 		& F_u 	 		& 0 &0& \hdots & 0 \\
-         {F_x}^2 F_u(t) 		& {F_x}^1 F_u 	& F_u &0& \hdots & 0 \\ \\
-         \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ \\
-         {F_x}^{N_s-1} F_u(t) 	&  {F_x}^{N_s-2}	& \hdots& {F_x}^2 F_u& {F_x}^1 F_u  & F_u \\
-    \end{pmatrix}\begin{pmatrix} 
-        p_0 \\
-        \vdots \\
-        p_{N_s}
-    \end{pmatrix} - \begin{pmatrix} 
-        \dot{c}^*-F_x(t) c_0\\
-        \dot{c}^*-F_x(t){F_x}^1 c_0\\
-        \vdots \\
-        \dot{c}^*-F_x(t){F_x}^{N_s-1} c_0\\
-    \end{pmatrix}
-\end{equation}
-
-
-\begin{equation}\label{min_step_dist}
-	\begin{pmatrix} 
-         \beta    & -\beta 	 	& 0 &0& \hdots & 0 \\
-         0&\beta    & -\beta 	 	& 0 & \hdots & 0 \\
-         \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ 
-         0       		&  	 		&    \hdots&  & \beta    & -\beta \\
-	\end{pmatrix}
-	\begin{pmatrix} 
-        p_0 \\
-        \vdots \\
-        p_{N_s}
-	\end{pmatrix}- \begin{pmatrix} 
-        \beta \Delta\\
-        \beta (-1)\Delta\\
-        \vdots \\
-        \beta(-1)^{N_s-1}\Delta\\
-	\end{pmatrix}
-\end{equation}
-
-
-
-
-
-\begin{equation}\label{p0_p1}
-	\begin{pmatrix} 
-         \Gamma    & 0 	 	& 0 &0& \hdots & 0 \\
-         0&\Gamma_2    & 0	 	& 0 & \hdots & 0 \\
-        \end{pmatrix}
-	\begin{pmatrix} 
-        p_0 \\
-        \vdots \\
-        p_{N_s}
-	\end{pmatrix}- \begin{pmatrix} 
-        \Gamma     {p_{0}}^*\\
-         \Gamma_2  {p_{1}}^*\\
-	\end{pmatrix}
-\end{equation}
-
-\section*{FullBody part}
-\begin{equation}\label{FullBody}
-    \begin{pmatrix} 
-         [J_{com}]_z\\
-         [J_{torso}]_{rx,ry,rz}\\
-         [J_{flyingFoot}]_{z,r_x,r_y,r_z}\\
-          J_{supportFoot} \\
-          J_{Posture} \\
-    \end{pmatrix}
-    \bold{\ddot{q}}-
+    Follow a COM velocity (evaluated at each phase switching)
+    \begin{equation}\label{min_velocity}
         \begin{pmatrix} 
-         [-{K_p} \varepsilon_{com}        - {K_d}\dot{\varepsilon}_{com}        - \dot{J}_{com} \dot{q}]_z\\
-         [-{K_p} \varepsilon_{torso}      - {K_d}\dot{\varepsilon}_{torso}      - \dot{J}_{torso} \dot{q}]_{r_x,r_y,r_z} \\
-         [-{K_p} \varepsilon_{flyingFoot} - {K_d}\dot{\varepsilon}_{flyingFoot}  -\dot{J}_{flyingFoot} \dot{q}]_{z,r_x,r_y,r_z}\\
-         -{K_p} \varepsilon_{supportFoot} - {K_d}\dot{\varepsilon}_{supportFoot} -\dot{J}_{supportFoot} \dot{q}\\
-         {\delta}[-{K_p} \varepsilon_{Posture} - {K_d}\dot{\varepsilon}_{Posture}] \\
+             F_u(t)        		& 0 	 		& 0 &0& \hdots & 0 \\
+             {F_x}^1 F_u(t) 		& F_u 	 		& 0 &0& \hdots & 0 \\
+             {F_x}^2 F_u(t) 		& {F_x}^1 F_u 	& F_u &0& \hdots & 0 \\ \\
+             \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ \\
+             {F_x}^{N_s-1} F_u(t) 	&  {F_x}^{N_s-2}	& \hdots& {F_x}^2 F_u& {F_x}^1 F_u  & F_u \\
+        \end{pmatrix}\begin{pmatrix} 
+            p_0 \\
+            \vdots \\
+            p_{N_s}
+        \end{pmatrix} - \begin{pmatrix} 
+            \dot{c}^*-F_x(t) c_0\\
+            \dot{c}^*-F_x(t){F_x}^1 c_0\\
+            \vdots \\
+            \dot{c}^*-F_x(t){F_x}^{N_s-1} c_0\\
         \end{pmatrix}
-\end{equation}
+    \end{equation}
+
+    With a reasonable step size
+    (to be replaced with inegality constrains)
+    \begin{equation}\label{min_step_dist}
+        \begin{pmatrix} 
+             \beta    & -\beta 	 	& 0 &0& \hdots & 0 \\
+             0&\beta    & -\beta 	 	& 0 & \hdots & 0 \\
+             \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ 
+             0       		&  	 		&    \hdots&  & \beta    & -\beta \\
+        \end{pmatrix}
+        \begin{pmatrix} 
+            p_0 \\
+            \vdots \\
+            p_{N_s}
+        \end{pmatrix}- \begin{pmatrix} 
+            \beta \Delta\\
+            \beta (-1)\Delta\\
+            \vdots \\
+            \beta(-1)^{N_s-1}\Delta\\
+        \end{pmatrix}
+    \end{equation}
+
+
+
+
+    ZMP should be closed to the center of support foot (p0-p0*).
+
+    Landing foot position should not change to much when the flyingfoot is about to land (p1-p1*).
+    \begin{equation}\label{p0_p1}
+        \begin{pmatrix} 
+             \Gamma    & 0 	 	& 0 &0& \hdots & 0 \\
+             0&\Gamma_2    & 0	 	& 0 & \hdots & 0 \\
+            \end{pmatrix}
+        \begin{pmatrix} 
+            p_0 \\
+            \vdots \\
+            p_{N_s}
+        \end{pmatrix}- \begin{pmatrix} 
+            \Gamma     {p_{0}}^*\\
+             \Gamma_2  {p_{1}}^*\\
+        \end{pmatrix}
+    \end{equation}
+
+Note: the step is divided in two phases, one called adaptative where there is no constraints on landing area ($\Gamma_2=0$). Durring this phase, the foot trajectory adapts to the the landing goal position.
+In the second phase (called non-adaptative) the foot landing area must converge closed to the last landing area preicted in the first phase. $\Gamma_2=0$ goes from zero to $\Gamma$ to have the same effect that the next constrains on zmp.
+\section*{FullBody part}
+    Altiutude of com is regulated whith a PD, so as the support foot, the torso and the altitude of the flyingfoot.
+    A posture task is given, with a low gain so it behaves like a lower priority task.
+    \begin{equation}\label{FullBody}
+        \begin{pmatrix} 
+             [\bold{J}_{com}]_z\\
+             [\bold{J}_{torso}]_{rx,ry,rz}\\
+             [\bold{J}_{flyingFoot}]_{z,r_x,r_y,r_z}\\
+              \bold{J}_{supportFoot} \\
+              {\delta}\bold{J}_{Posture} \\
+        \end{pmatrix}
+        \bold{\ddot{q}}-
+            \begin{pmatrix} 
+             [-{K_p} \varepsilon_{com}        - {K_d}\dot{\varepsilon}_{com}        - \bold{\dot{J}}_{com} \dot{q}]_z\\
+             [-{K_p} \varepsilon_{torso}      - {K_d}\dot{\varepsilon}_{torso}      - \bold{\dot{J}}_{torso} \dot{q}]_{r_x,r_y,r_z} \\
+             [-{K_p} \varepsilon_{flyingFoot} - {K_d}\dot{\varepsilon}_{flyingFoot}  -\bold{\dot{J}}_{flyingFoot} \dot{q}]_{z,r_x,r_y,r_z}\\
+             -{K_p} \varepsilon_{supportFoot} - {K_d}\dot{\varepsilon}_{supportFoot} -\bold{\dot{J}}_{supportFoot} \dot{q}\\
+             {\delta}[-{K_p} \varepsilon_{Posture} - {K_d}\dot{\varepsilon}_{Posture}] \\
+            \end{pmatrix}
+    \end{equation}
 
 \section*{Coupling contrains}
-The center of mass acceleration in x and y is a linear function of p0 (aka zmp) thanks to the LIP model
-\begin{equation}
-	[{J}_{com} \ddot{q}+\dot{J}_{com} \dot{q}]_{x,y}=[a_{com}p_0+b_{com}]_{x,y}
-\end{equation}
-The flying foot acceleration in x and y is a linear function of p1 (the landing placement of the flying foot) thanks to the polynomial foot trajectory
-\begin{equation}
-	[{J}_{flyingFoot} \ddot{q}+\dot{J}_{flyingFoot} \dot{q}]_{x,y}=[a_{flyingFoot}p_0+b_{flyingFoot}]_{x,y}
-\end{equation}
-\section*{Full problem}
-\begin{equation*}
-\begin{aligned}
-& \underset{\bold{p},\bold{\ddot{q}}}{\text{minimize}}
-& & \norm{
-	\begin{pmatrix} 
-         \bold{A_{MPC x}}     & 0 	 & 0\\
-         0         & \bold{A_{MPC y}} & 0 \\
-         0         & 0 &  \bold{A_{WholeBody}}
+    The center of mass acceleration in x and y is a linear function of p0 (aka zmp) thanks to the LIP model
+    \begin{equation}
+        [{J}_{com} \ddot{q}+\dot{J}_{com} \dot{q}]_{x,y}=[a_{com}p_0+b_{com}]_{x,y}
+    \end{equation}
+    The flying foot acceleration in x and y is a linear function of p1 (the landing placement of the flying foot) thanks to the polynomial foot trajectory
+    \begin{equation}
+        [{J}_{flyingFoot} \ddot{q}+\dot{J}_{flyingFoot} \dot{q}]_{x,y}=[a_{flyingFoot}p_0+b_{flyingFoot}]_{x,y}
+    \end{equation}
+    \section*{Full problem}
+    \begin{equation*}
+    \begin{aligned}
+    & \underset{\bold{p},\bold{\ddot{q}}}{\text{minimize}}
+    & & \norm{
+        \begin{pmatrix} 
+             \bold{A}_{MPC x}     & 0 	 & 0\\
+             0         & \bold{A}_{MPC y} & 0 \\
+             0         & 0 &  \bold{A}_{WholeBody}
+            \end{pmatrix}
+        \begin{pmatrix} 
+            \bold{p}_{x0} \\
+            \bold{p}_{y0} \\
+            \bold{\ddot{q}
+            }
         \end{pmatrix}
-	\begin{pmatrix} 
-        \bold{p_{x0}} \\
-        \bold{p_{y0}} \\
-        \bold{\ddot{q}
-        }
-	\end{pmatrix}
-	- \begin{pmatrix} 
-        \bold{b_{MPC x}}\\
-        \bold{b_{MPC y}}\\
-        \bold{b_{WholeBody}}
-	\end{pmatrix}	
-}_2 \\
-& \text{subject to}
-& & {\bold{A}_{constrains}\begin{pmatrix} 
-        \bold{p} \\
-        \bold{\ddot{q}}
-	\end{pmatrix}- \bold{b}_{constrains}} 	
-\end{aligned}
-\end{equation*}
+        - \begin{pmatrix} 
+            \bold{b}_{MPC x}\\
+            \bold{b}_{MPC y}\\
+            \bold{b}_{WholeBody}
+        \end{pmatrix}	
+    }_2 \\
+    & \text{subject to}
+    & & {\bold{A}_{constrains}\begin{pmatrix} 
+            \bold{p} \\
+            \bold{\ddot{q}}
+        \end{pmatrix}- \bold{b}_{constrains}} 	
+    \end{aligned}
+    \end{equation*}
 
+\section*{Work to be done}
+Replace (\ref{min_step_dist}) with inequality.
 
+Add double support phases
+
+reimplement the polynomial trajectory generator.
 \end{document}
