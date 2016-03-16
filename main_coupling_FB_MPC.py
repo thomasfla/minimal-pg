@@ -7,7 +7,6 @@ from foot_trajectory_generator import Foot_trajectory_generator
 import matplotlib.pyplot as plt   
 import numpy as np
 
-
 from pinocchio.romeo_wrapper import RomeoWrapper
 from pinocchio.reemc_wrapper import ReemcWrapper
 from initial_pose_generator import *
@@ -23,7 +22,7 @@ USE_GAMEPAD=True
 DISPLAY_PREVIEW=False
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
-STOP_TIME = np.inf
+STOP_TIME = 4.0#np.inf
 USE_QPOASES =False
 
 
@@ -45,7 +44,7 @@ elif (ROBOT_MODEL == "REEMC"):
     h=0.80  #(m) Heigth of COM
 fh=0.05 #maximum altitude of foot in flying phases 
 ev_foot_const = 0.7# % when the foot target become constant (0.8)
-durrationOfStep=0.5#(s) time of a step
+durrationOfStep=0.8#(s) time of a step
 Dpy=0.20
 beta_x=3.0 #cost on pi-pi+1
 beta_y=6.0

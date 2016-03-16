@@ -51,6 +51,7 @@ class PinocchioControllerAcceleration(object):
         RPY_RF=np.matrix([[.0],[.0],[.0]])
         SE3_RF=se3.SE3(self.robot.Mrf(self.robot.q0).rotation,XYZ_RF)#in case of reemc, foot orientation is not identity
         
+
         #_RF________________________________________________________________
         Jrf=self.robot.Jrf(self.q).copy()
         v_ref= se3.se3.Motion(np.matrix([dRf[0],dRf[1],dRf[2],.0,.0,.0]).T)
