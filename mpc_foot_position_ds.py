@@ -233,7 +233,7 @@ if TEST == True:
     
     
     def plot_com(x0,p):
-        pps = 10000
+        pps = 1000
         td = durrationOfStep - Tds
         log_t=[]
         log_zmp=[]
@@ -331,7 +331,7 @@ if TEST == True:
         
     durrationOfStep=0.8
     
-    pps = 10000
+    pps = 1000
     td = durrationOfStep - Tds
     log_t=[]
     log_zmp=[]
@@ -341,38 +341,36 @@ if TEST == True:
     it=0
     tk=0
     
-    vcom_av=[]
-    vcom_av_analyt=[]
-    for i in range(4):
-        sum_vcom=0
-        p0=p[i  ]
-        p1=p[i+1]
-        p01=np.matrix([[p0],
-                       [p1]])
+    #~ vcom_av=[]
+    #~ vcom_av_analyt=[]
+    #~ for i in range(4):
+        #~ sum_vcom=0
+        #~ p0=p[i  ]
+        #~ p1=p[i+1]
+        #~ p01=np.matrix([[p0],
+                       #~ [p1]])
         #~ for t in np.linspace(0,durrationOfStep,10):
-        for ev in np.linspace(0,1-(1.0/pps),pps):
-            it+=1
-            t=durrationOfStep*ev
-            log_t.append(t+i*durrationOfStep)
-            if (t < td): #Single support phase
-                zmp=p0
-                x = temporal_Sx(t) * x0  + temporal_Su(t) * p0
-                #~ x_last = x
-            else :       #double support phase
-                x_afterSS = temporal_Sx(td) * x0  + temporal_Su(td) * p0
-                zmp=p0+((p1-p0)*(t-td))/Tds
-                x = temporal_Dx(t-td) * x_afterSS  + temporal_Du(t-td) * p01
-            sum_vcom+=x.item(1)
-            log_zmp.append(zmp)
-            log_com.append(x.item(0))
-            log_vcom.append(x.item(1))
-        x = temporal_Dx(durrationOfStep-td) * x_afterSS  + temporal_Du(durrationOfStep-td) * p01
-        vcom_av.append(sum_vcom/pps)
-        vcom_av_analyt.append((x.item(0)-x0.item(0))/durrationOfStep)
-
-        ev=0.0
-        tk+=durrationOfStep
-        x0=x
+        #~ for ev in np.linspace(0,1-(1.0/pps),pps):
+            #~ it+=1
+            #~ t=durrationOfStep*ev
+            #~ log_t.append(t+i*durrationOfStep)
+            #~ if (t < td): #Single support phase
+                #~ zmp=p0
+                #~ x = temporal_Sx(t) * x0  + temporal_Su(t) * p0
+            #~ else :       #double support phase
+                #~ x_afterSS = temporal_Sx(td) * x0  + temporal_Su(td) * p0
+                #~ zmp=p0+((p1-p0)*(t-td))/Tds
+                #~ x = temporal_Dx(t-td) * x_afterSS  + temporal_Du(t-td) * p01
+            #~ sum_vcom+=x.item(1)
+            #~ log_zmp.append(zmp)
+            #~ log_com.append(x.item(0))
+            #~ log_vcom.append(x.item(1))
+        #~ x = temporal_Dx(durrationOfStep-td) * x_afterSS  + temporal_Du(durrationOfStep-td) * p01
+        #~ vcom_av.append(sum_vcom/pps)
+        #~ vcom_av_analyt.append((x.item(0)-x0.item(0))/durrationOfStep)
+        #~ ev=0.0
+        #~ tk+=durrationOfStep
+        #~ x0=x
         
     Dx=temporal_Dx(durrationOfStep-td)
     Du=temporal_Du(durrationOfStep-td)
@@ -413,6 +411,7 @@ if TEST == True:
 
     b_p1 =  np.matrix(np.zeros([Nstep*2,1]))
     
+    
     for i in range(Nstep):
         b_p1[2*i:2*i+2,0]=((Dx*Sx)**(i+1)*x0)
     pf = np.vstack([p01,p12,p23,p34])
@@ -422,33 +421,61 @@ if TEST == True:
     print A_p1_bis*pf_bis.T+b_p1
 
     #   Least Square
+    A_vel = np.zeros([Nstep,Nstep+1])
+    A_pos = np.zeros([Nstep,Nstep+1])
+    b_vel =  np.matrix(np.zeros([Nstep,1]))
+    b_pos =  np.matrix(np.zeros([Nstep,1]))
+    for i in range(Nstep):
+        A_pos[i,:] = A_p1_bis[ 2*i   ,:]
+        A_vel[i,:] = A_p1_bis[2*i+1,:]
+        b_pos[i,:] = b_p1[2*i  ]
+        b_vel[i,:] = b_p1[2*i+1]
+        
+    
     A=A_p1_bis
-    
-    
-    embed()
-
-    
-    
     b=-b_p1
     p_opt = np.linalg.pinv(A) * b
+    p=p_opt.T.tolist()[0]
+    #~ plot_com(x0,p)
+
+    A=A_pos
+    b=-b_pos
+    p_opt = np.linalg.pinv(A) * b
+    p=p_opt.T.tolist()[0]
+    #~ plot_com(x0,p)
+
+    #~ A=A_vel
+    #~ b=-b_vel
+    #~ p_opt = np.linalg.pinv(A) * b
+    #~ p=p_opt.T.tolist()[0]
+    #~ plot_com(x0,p)
+    
+    vel_cons = 0.5*np.ones([Nstep,1])
+
+    A_velAverage = np.vstack([ np.zeros([1,Nstep+1]),A_pos[:Nstep-1] ]) - A_pos
+    b_velAverage = np.vstack([- x0[0],b_pos[:Nstep-1] ]) - b_pos
+    
+    A=np.vstack([A_velAverage            ,  A_vel[-1:]])
+    b=np.vstack([-b_velAverage - vel_cons, -b_vel[-1:]])
+    
+    
+    p_opt = np.linalg.pinv(A) * b
+    print b
+    p=p_opt.T.tolist()[0]
+    print p_opt
     embed()
-    plot_com(x0,p_opt.T.tolist()[0])
-    embed()
-
-
-
-    plt.subplot(2,1,1)
-    plt.plot(log_t,log_zmp)
-    plt.plot(log_t,log_com)
-    plt.subplot(2,1,2)
-    plt.plot(log_t,log_vcom)
+    plot_com(x0,p)
+#~ 
+#~ 
+    #~ plt.subplot(2,1,1)
+    #~ plt.plot(log_t,log_zmp)
+    #~ plt.plot(log_t,log_com)
+    #~ plt.subplot(2,1,2)
+    #~ plt.plot(log_t,log_vcom)
 
     #~ plt.figure()
     #~ plt.plot(log_t,'x')
-    print "average of com velocity of com durring each step is about :"
-    print vcom_av
-    print vcom_av_analyt
-    plt.show()
+    #~ plt.show()
     
     pg=PgMini()
     pg.computeStepsPosition()
