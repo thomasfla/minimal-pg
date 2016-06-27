@@ -133,20 +133,20 @@ F_u=F_u(T_{pas})
 Finalement, le problème (\ref{problem}) revient à minimiser la norme quadratique des quantités (\ref{min_velocity}) et (\ref{min_step_dist}):
 \begin{equation}\label{min_velocity}
 \begin{pmatrix} 
- F_u        		& 0 	 		& 0 &0& \hdots & 0 \\
- {F_x}^1 F_u 		& F_u 	 		& 0 &0& \hdots & 0 \\
- {F_x}^2 F_u 		& {F_x}^1 F_u 	& F_u &0& \hdots & 0 \\ \\
+ F_u(t)        		& 0 	 		& 0 &0& \hdots & 0 \\
+ {F_x}^1 F_u(t) 		& F_u 	 		& 0 &0& \hdots & 0 \\
+ {F_x}^2 F_u(t) 		& {F_x}^1 F_u 	& F_u &0& \hdots & 0 \\ \\
  \vdots	 			&\vdots 	& \vdots & \vdots &  \ddots & 0 \\ \\
- {F_x}^{N_s-1} F_u 	&  {F_x}^{N_s-2}	& \hdots& {F_x}^2 F_u& {F_x}^1 F_u  & F_u \\
+ {F_x}^{N_s-1} F_u(t) 	&  {F_x}^{N_s-2}	& \hdots& {F_x}^2 F_u& {F_x}^1 F_u  & F_u \\
 \end{pmatrix}\begin{pmatrix} 
 f_0 \\
 \vdots \\
 f_{N_s}
 \end{pmatrix} - \begin{pmatrix} 
-\dot{c}^*-{F_x} c_0\\
-\dot{c}^*-{F_x}^2 c_0\\
+\dot{c}^*-F_x(t) c_0\\
+\dot{c}^*-F_x(t){F_x}^1 c_0\\
 \vdots \\
-\dot{c}^*-{F_x}^{N_s} c_0\\
+\dot{c}^*-F_x(t){F_x}^{N_s-1} c_0\\
 \end{pmatrix}
 \end{equation}
 \begin{equation}\label{min_step_dist}
