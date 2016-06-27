@@ -16,7 +16,7 @@ class PinocchioControllerAcceleration(object):
         self.v =np.copy(self.robot.v0)
         self.a =np.copy(self.robot.v0)
 
-    def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],ddLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],ddRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.0,.0,.0],LR=True,XYZ_RH=np.matrix([[1.],[.0],[0.8]])):
+    def controlLfRfCom(self,Lf=[.0,.0,.0],dLf=[.0,.0,.0],ddLf=[.0,.0,.0],Rf=[.0,.0,.0],dRf=[.0,.0,.0],ddRf=[.0,.0,.0],Com=[0,0,0.63],dCom=[.0,.0,.0],ddCom=[.0,.0,.0],LR=True,XYZ_RH=np.matrix([[1.],[.0],[0.8]]),FLAG_DOUBLE_SUPPORT=False):
         dLf=[.0,.0,.0]
         def errorInSE3( M,Mdes):
             '''
@@ -103,23 +103,23 @@ class PinocchioControllerAcceleration(object):
 
         K=1000.0
         Kp_foot=K
-        Kp_com=K
+        Kp_com=K*10.0
         Kp_Trunk=K
         Kp_post=K
-        Kp_Rh=.1
+        #~ Kp_Rh=.1
         
 
         Kd_foot= 2*np.sqrt(Kp_foot )
         Kd_com=  2*np.sqrt(Kp_com  )
         Kd_Trunk=2*np.sqrt(Kp_Trunk) 
         Kd_post= 2*np.sqrt(Kp_post ) 
-        Kd_Rh=   2*np.sqrt(Kp_Rh ) 
+        #~ Kd_Rh=   2*np.sqrt(Kp_Rh ) 
         Jpost = np.hstack( [ zero([self.robot.nv-6,6]), eye(self.robot.nv-6) ] )
 
         #for test, posture is included in 1st task
-        eps=1e-3 #importance of posture cost
+        eps=1e-2 #importance of posture cost
 
-        J1 = np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
+        #~ J1 = np.vstack([Jcom[:2],Jcom[2],Jlf,Jrf,JTrunk,eps*Jpost])
 
         if (LR):
             JflyingFoot     =      Jlf
@@ -144,19 +144,36 @@ class PinocchioControllerAcceleration(object):
             v_errSupportFoot=  v_errLf
             dJdqSupportFoot =   dJdqLf
             
+        #~ embed()
+        if (FLAG_DOUBLE_SUPPORT):
+            #in double support, all component of the flyingfoot (witch is landed acctualy) are fixed by a PD controller
+            errflyingFoot_PD   = errflyingFoot  
+            v_errflyingFoot_PD = v_errflyingFoot
+            dJdqFlyingFoot_PD  = dJdqFlyingFoot
+            JflyingFoot_PD = JflyingFoot
+        else :
+            #~ #in single support, just the 3 rotations and the altitude are fixed with a PD controller 
+            #~ #the rest is a coupling constrain
+            errflyingFoot_PD   = errflyingFoot[2:] 
+            v_errflyingFoot_PD = v_errflyingFoot[2:] 
+            dJdqFlyingFoot_PD  = dJdqFlyingFoot[2:] 
+            JflyingFoot_PD = JflyingFoot[2:]
+            # Rq: this changes the problem size, maybe should keep a constant size with dummy line?
+            
         #~ J1 = np.vstack([Jcom[2],JTrunk,JflyingFoot[2:],JsupportFoot,eps*Jpost,Jrh[:3]])
-        J1 = np.vstack([Jcom[2],JTrunk,JflyingFoot[2:],JsupportFoot,eps*Jpost])
-
+        J1 = np.vstack([Jcom[2],JTrunk,JflyingFoot_PD,JsupportFoot,eps*Jpost])
+        
         Ac1 =    np.vstack([Kp_com*errComZ             - Kd_com  *v_errComZ           - dJdqCOM[2]
                           ,-Kp_Trunk*errTrunk          - Kd_Trunk*v_errTrunk          - dJdqTrunk
-                          ,-Kp_foot*errflyingFoot[2:]  - Kd_foot *v_errflyingFoot[2:] - dJdqFlyingFoot[2:]
+                          ,-Kp_foot*errflyingFoot_PD  - Kd_foot *v_errflyingFoot_PD - dJdqFlyingFoot_PD
                           ,-Kp_foot*errSupportFoot     - Kd_foot *v_errSupportFoot    - dJdqSupportFoot
-                          ,eps*(-Kp_post*errPost  - Kd_post*v_errPost )                                     ])
+                          ,eps*(-Kp_post*errPost  - Kd_post*v_errPost )                                 ])
                           #~ ,-Kp_Rh*errRh[:3]                - Kd_Rh*v_errRh[:3]                - dJdqRh[:3]  ])
 
-    
+        #matrix for the QP or LSQ
         self.A_FB = J1
         self.b_FB = Ac1
+        #terms used for coupling
         self.JflyingFoot = JflyingFoot
         self.Jcom = Jcom
         self.dJdqCOM = dJdqCOM

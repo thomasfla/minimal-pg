@@ -150,6 +150,7 @@ class PgMini (object):
         self.A_MPC=np.vstack([np.hstack([A_p_x                ,np.zeros(A_p_x.shape)]),
                               np.hstack([np.zeros(A_p_y.shape),A_p_y                ])])
         self.b_MPC=np.vstack([b_p_x,b_p_y])
+        
         #~ np.set_printoptions(linewidth=100)
 
 

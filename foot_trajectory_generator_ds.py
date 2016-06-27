@@ -4,7 +4,7 @@ from IPython import embed
 import matplotlib.pyplot as plt
 
 #~ TESTING_GENERATOR=False
-TESTING_GENERATOR=False
+TESTING_GENERATOR=True
 class Foot_trajectory_generator(object):
     '''This class provide adaptative 3d trajectory for a foot from (x0,y0) to (x1,y1) using polynoms'''
     def __init__(self,h=0.5,time_adaptative_disabled=0.200):
@@ -21,8 +21,7 @@ class Foot_trajectory_generator(object):
         self.lastCoeffs=[0.0,0.0,0.0,0.0,0.0,0.0 , 0.0,0.0,0.0,0.0,0.0,0.0 , 0.0,0.0,0.0,0.0,0.0,0.0 , 0.0,0.0,0.0,0.0,0.0,0.0]
         self.x1=0.0
         self.y1=0.0
-        
-        
+
         #express acceleration as: ddx0 = (coeff_acc_x_lin_a) * x1 + coeff_acc_x_lin_b
         #                         ddy0 = (coeff_acc_y_lin_a) * x1 + coeff_acc_y_lin_b
         #Remark : When the trajectory becomes non-adaptative coeff_acc_x_lin_a is = 0.0 and coeff_acc_y_lin_b contains the full information of the acceleration!
@@ -39,6 +38,7 @@ class Foot_trajectory_generator(object):
         h=self.h
         adaptative_mode = (t1 - t0) > self.time_adaptative_disabled
         if( adaptative_mode ):
+            #~ sacred code
             #compute polynoms coefficients for x and y
             #~ Ax5=(ddx0*t0**2 - 2*ddx0*t0*t1 - 6*dx0*t0 + ddx0*t1**2 + 6*dx0*t1 + 12*x0 - 12*x1)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
             #~ Ax4=(30*t0*x1 - 30*t0*x0 - 30*t1*x0 + 30*t1*x1 - 2*t0**3*ddx0 - 3*t1**3*ddx0 + 14*t0**2*dx0 - 16*t1**2*dx0 + 2*t0*t1*dx0 + 4*t0*t1**2*ddx0 + t0**2*t1*ddx0)/(2*(t0 - t1)**2*(t0**3 - 3*t0**2*t1 + 3*t0*t1**2 - t1**3))
@@ -175,8 +175,6 @@ class Foot_trajectory_generator(object):
 
 
         return [x0,dx0,ddx0  ,  y0,dy0,ddy0  ,  z0,dz0,ddz0 , self.x1,self.y1] 
-
-
 
 if (TESTING_GENERATOR==True):
     ftg = Foot_trajectory_generator(0.5,0.1)
