@@ -2,7 +2,7 @@ import pinocchio as se3
 import numpy as np
 from pinocchio.utils import *
 from pinocchio.romeo_wrapper import RomeoWrapper
-from pinocchio.reemc_wrapper import ReemcWrapper
+#~ from pinocchio.reemc_wrapper import ReemcWrapper
 from qpoases import PyQProblemB as QProblemB
 from qpoases import PyQProblem as QProblem
 import scipy
@@ -24,7 +24,7 @@ class PinocchioControllerAcceleration(object):
             between M and Mdes, both element of SE3.
             '''
             error = se3.log(Mdes.inverse()*M)
-            return error.vector()
+            return error.vector
 
         def errorLinkInSE3dyn(linkId,Mdes,v_des,q,v):
             # Get the current configuration of the link
@@ -38,16 +38,18 @@ class PinocchioControllerAcceleration(object):
 
             a_corriolis = self.robot.acceleration(q,v,0*v,linkId)
             a_tot = a_corriolis
-            dJdq = a_corriolis.vector() 
-            return error,v_error.vector() ,dJdq
+            dJdq = a_corriolis.vector 
+            return error,v_error.vector ,dJdq
 
         zFeetOffset=self.robot.Mlf(self.robot.q0).translation[2]
         
         XYZ_LF=np.array(Lf)+np.array([.0,.0,zFeetOffset])
+        XYZ_LF=np.matrix(XYZ_LF).T
         RPY_LF=np.matrix([[.0],[.0],[.0]])
         SE3_LF=se3.SE3(self.robot.Mlf(self.robot.q0).rotation,XYZ_LF) #in case of reemc, foot orientation is not identity
 
         XYZ_RF=np.array(Rf)+np.array([.0,.0,zFeetOffset])#np.array([.0,.0,0.07])
+        XYZ_RF=np.matrix(XYZ_RF).T
         RPY_RF=np.matrix([[.0],[.0],[.0]])
         SE3_RF=se3.SE3(self.robot.Mrf(self.robot.q0).rotation,XYZ_RF)#in case of reemc, foot orientation is not identity
         
@@ -87,7 +89,7 @@ class PinocchioControllerAcceleration(object):
         dJdqCOM=-a_com
 
         #_Trunk_____________________________________________________________
-        idx_Trunk = self.robot.index('root')
+        idx_Trunk = self.robot.index('root_joint')
 
         MTrunk0=self.robot.position(self.robot.q0,idx_Trunk)
         MTrunk=self.robot.position(self.q,idx_Trunk)

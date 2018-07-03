@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pinocchio.romeo_wrapper import RomeoWrapper
-from pinocchio.reemc_wrapper import ReemcWrapper
+#~ from pinocchio.reemc_wrapper import ReemcWrapper
 from initial_pose_generator import *
 from macro_plot import *
 from least_square_equality_constrained import *
@@ -18,11 +18,11 @@ print ("start")
 N_COM_TO_DISPLAY = 10 #preview: number of point in a phase of COM (no impact on solution, display only)
 
 USE_WIIMOTE=False
-USE_GAMEPAD=True
+USE_GAMEPAD=False
 DISPLAY_PREVIEW=False
 ENABLE_LOGING=True
 ROBOT_MODEL="ROMEO" 
-STOP_TIME = 20.0 #np.inf
+STOP_TIME = 3.0 #np.inf
 USE_QPOASES =False
 
 if USE_QPOASES:
@@ -77,13 +77,21 @@ print( "dt= "+str(dt*1000)+"ms")
 
 #load robot model
 if   (ROBOT_MODEL == "ROMEO"):
-    robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo.urdf")
+    mesh_dir = "/home/tflayols/softwares/pinocchio/models/romeo"
+    robot = RomeoWrapper("/home/tflayols/softwares/pinocchio/models/romeo/romeo_description/urdf/romeo_small.urdf",[mesh_dir])
     #~ robot = RomeoWrapper("/local/tflayols/softwares/pinocchio/models/romeo_heavy_hand.urdf") #TO BE DEL
 
 elif (ROBOT_MODEL == "REEMC"): 
     robot = ReemcWrapper("/home/tflayols/devel-src/reemc_wrapper/reemc/reemc.urdf")
+
+import gepetto.corbaserver
+
+cl = gepetto.corbaserver.Client()
+gui = cl.gui
+if gui.nodeExists("world"):
+    gui.deleteNode("world",True)
 robot.initDisplay()
-robot.loadDisplayModel("world/pinocchio","pinocchio")
+robot.loadDisplayModel("pinocchio")
 
 #Initial pose, stand on one feet (com = center of foot)
 q_init=compute_initial_pose(robot)

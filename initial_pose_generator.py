@@ -2,7 +2,7 @@ import pinocchio as se3
 import numpy as np
 from pinocchio.utils import *
 from pinocchio.romeo_wrapper import RomeoWrapper
-from pinocchio.reemc_wrapper import ReemcWrapper
+#~ from pinocchio.reemc_wrapper import ReemcWrapper
 from IPython import embed
 '''Provide a position (q) of the robot joints close to q0 and with CoM on the foot center'''
 
@@ -15,7 +15,7 @@ def errorInSE3( M,Mdes):
     between M and Mdes, both element of SE3.
     '''
     error = se3.log(Mdes.inverse()*M)
-    return error.vector()
+    return error.vector
     
     
 def robotint(q,dq):
